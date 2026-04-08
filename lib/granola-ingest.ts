@@ -1,0 +1,239 @@
+/**
+ * Granola Auto-Ingest — the autonomous pipeline.
+ *
+ * Polls Granola for new meetings, classifies, extracts atoms,
+ * resolves entities, stores to dx_atoms.
+ */
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
+import { createHash } from "crypto";
+import { getSupabaseAdmin } from "@/lib/supabase";
+import {
+  listMeetings,
+  getTranscript,
+  getMeetingWithNotes,
+  formatTranscript,
+  parseNotesMetadata,
+  deriveMeetingDate,
+} from "@/lib/granola";
+import { classifyTranscript, getExtractionPlan } from "@/lib/classify";
+import { extractAtoms } from "@/lib/atom-extract";
+import { insertAtoms } from "@/lib/atom-db";
+import { loadRegistries, resolveAtoms } from "@/lib/resolve";
+
+// ─── Sync state ──────────────────────────────────
+
+const SYNC_PATH = join(process.cwd(), ".granola-sync.json");
+
+interface SyncState {
+  last_synced_at: string;
+}
+
+function readSyncState(): SyncState | null {
+  try {
+    if (!existsSync(SYNC_PATH)) return null;
+    return JSON.parse(readFileSync(SYNC_PATH, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeSyncState(state: SyncState): void {
+  writeFileSync(SYNC_PATH, JSON.stringify(state, null, 2), "utf-8");
+}
+
+// ─── Transcript hashing (dedup) ──────────────────
+
+function hashTranscript(text: string): string {
+  return createHash("sha256").update(text.trim()).digest("hex");
+}
+
+// ─── Ingest result ───────────────────────────────
+
+export interface IngestResult {
+  processed: number;
+  skipped: number;
+  dismissed: number;
+  atom_counts: Record<string, number>;
+  total_atoms: number;
+  total_tokens: number;
+  meetings: Array<{
+    title: string;
+    date: string;
+    atoms: number;
+    status: "extracted" | "dismissed" | "skipped" | "error";
+  }>;
+}
+
+// ─── Main ingest ─────────────────────────────────
+
+export async function ingestFromGranola(options?: {
+  since?: string;
+  backfill?: boolean;
+  force?: boolean;      // Skip dedup — re-extract even if transcript exists
+}): Promise<IngestResult> {
+  const db = getSupabaseAdmin();
+
+  // Determine start date
+  const syncState = readSyncState();
+  const since = options?.since ?? syncState?.last_synced_at ?? new Date(Date.now() - 7 * 86400000).toISOString();
+
+  // Load entity registries once
+  const { contacts, domains } = await loadRegistries();
+
+  // Fetch meetings from Granola (newest first, so we paginate until we pass `since`)
+  const allMeetings = await fetchMeetingsSince(since);
+
+  const result: IngestResult = {
+    processed: 0,
+    skipped: 0,
+    dismissed: 0,
+    atom_counts: {},
+    total_atoms: 0,
+    total_tokens: 0,
+    meetings: [],
+  };
+
+  // Process chronologically (oldest first)
+  allMeetings.reverse();
+
+  for (const meeting of allMeetings) {
+    try {
+      // Fetch transcript
+      const utterances = await getTranscript(meeting.id);
+      if (utterances.length === 0) {
+        result.skipped++;
+        result.meetings.push({ title: meeting.title, date: meeting.created_at.split("T")[0], atoms: 0, status: "skipped" });
+        continue;
+      }
+
+      // Get notes metadata for participant names
+      const meetingWithNotes = await getMeetingWithNotes(meeting.id);
+      const notesMeta = meetingWithNotes?.last_viewed_panel?.content
+        ? parseNotesMetadata(meetingWithNotes.last_viewed_panel.content)
+        : { participants: [] };
+
+      // Format transcript
+      const meetingDate = deriveMeetingDate(utterances, meeting.created_at);
+      const transcript = formatTranscript(utterances, meeting.title, meetingDate, notesMeta.participants);
+
+      // Dedup check — reuse existing transcript or create new
+      const hash = hashTranscript(transcript);
+      const { data: existing } = await db
+        .from("dx_transcripts")
+        .select("id")
+        .eq("transcript_hash", hash)
+        .single();
+
+      if (existing && !options?.force) {
+        result.skipped++;
+        result.meetings.push({ title: meeting.title, date: meetingDate, atoms: 0, status: "skipped" });
+        continue;
+      }
+
+      // Reuse existing transcript_id or create new
+      let transcriptId: string;
+      if (existing) {
+        transcriptId = existing.id;
+      } else {
+        const { data: txRecord, error: txError } = await db
+          .from("dx_transcripts")
+          .insert({
+            source_title: meeting.title,
+            source_date: meetingDate,
+            source_type: "granola",
+            transcript: transcript.trim(),
+            transcript_hash: hash,
+            word_count: transcript.split(/\s+/).length,
+            inbox_status: "approved",
+          })
+          .select("id")
+          .single();
+        if (txError) throw new Error(`Transcript insert failed: ${txError.message}`);
+        transcriptId = txRecord.id;
+      }
+
+      // Classify
+      const classification = await classifyTranscript(transcript, meeting.title);
+      const plan = getExtractionPlan(classification);
+
+      if (plan.dismiss) {
+        result.dismissed++;
+        result.meetings.push({ title: meeting.title, date: meetingDate, atoms: 0, status: "dismissed" });
+        continue;
+      }
+
+      // Multi-pass extraction
+      const extraction = await extractAtoms(transcript, meeting.title, plan.passes);
+
+      // Stamp metadata on atoms
+      for (const atom of extraction.atoms) {
+        atom.transcript_id = transcriptId;
+        atom.source_title = meeting.title;
+        atom.source_date = meetingDate;
+      }
+
+      // Resolve entities
+      resolveAtoms(extraction.atoms, contacts, domains);
+
+      // Insert atoms
+      await insertAtoms(extraction.atoms);
+
+      // Tally
+      result.processed++;
+      result.total_atoms += extraction.atoms.length;
+      result.total_tokens += extraction.tokens;
+      for (const [pass, count] of Object.entries(extraction.pass_results)) {
+        result.atom_counts[pass] = (result.atom_counts[pass] ?? 0) + count;
+      }
+      result.meetings.push({ title: meeting.title, date: meetingDate, atoms: extraction.atoms.length, status: "extracted" });
+
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`Ingest error for "${meeting.title}":`, errMsg);
+      result.meetings.push({
+        title: meeting.title,
+        date: meeting.created_at.split("T")[0],
+        atoms: 0,
+        status: "error",
+        error: errMsg,
+      } as typeof result.meetings[0]);
+    }
+  }
+
+  // Update sync state
+  writeSyncState({ last_synced_at: new Date().toISOString() });
+
+  return result;
+}
+
+// ─── Fetch meetings since date ───────────────────
+
+async function fetchMeetingsSince(since: string): Promise<Array<{ id: string; title: string; created_at: string }>> {
+  const sinceDate = new Date(since).getTime();
+  const meetings: Array<{ id: string; title: string; created_at: string }> = [];
+
+  let offset = 0;
+  const limit = 50;
+
+  while (true) {
+    const batch = await listMeetings(limit, offset);
+    if (batch.length === 0) break;
+
+    for (const doc of batch) {
+      const docDate = new Date(doc.created_at).getTime();
+      if (docDate >= sinceDate) {
+        meetings.push({ id: doc.id, title: doc.title, created_at: doc.created_at });
+      }
+    }
+
+    // If the oldest meeting in this batch is before our since date, stop paginating
+    const oldestInBatch = new Date(batch[batch.length - 1].created_at).getTime();
+    if (oldestInBatch < sinceDate) break;
+
+    offset += limit;
+  }
+
+  return meetings;
+}
