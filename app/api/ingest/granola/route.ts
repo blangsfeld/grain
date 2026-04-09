@@ -1,18 +1,35 @@
 /**
- * POST /api/ingest/granola
+ * POST /api/ingest/granola — Manual ingest trigger
+ * GET  /api/ingest/granola — Vercel cron trigger (hourly)
  *
- * Auto-ingest from Granola. Polls for new meetings, classifies,
- * extracts atoms, resolves entities, stores.
- *
- * Body: { since?: string, backfill?: boolean }
- * - since: ISO date to start from (overrides sync state)
- * - backfill: skip vault export, just extract
+ * Body (POST only): { since?, backfill?, force? }
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { ingestFromGranola } from "@/lib/granola-ingest";
 
 export const maxDuration = 300;
+
+function verifyCron(req: NextRequest): boolean {
+  const authHeader = req.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return true; // No secret = dev mode, allow
+  return authHeader === `Bearer ${cronSecret}`;
+}
+
+export async function GET(req: NextRequest) {
+  if (!verifyCron(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const result = await ingestFromGranola();
+    return NextResponse.json({ success: true, ...result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,13 +40,9 @@ export async function POST(req: NextRequest) {
 
     const result = await ingestFromGranola({ since, backfill, force });
 
-    return NextResponse.json({
-      success: true,
-      ...result,
-    });
+    return NextResponse.json({ success: true, ...result });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("Granola ingest error:", message);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/ingest/granola",
+      "schedule": "7 * * * *"
+    },
+    {
+      "path": "/api/cron/daily",
+      "schedule": "57 13 * * 1-5"
+    },
+    {
+      "path": "/api/cron/weekly",
+      "schedule": "47 3 * * 1"
+    }
+  ]
+}

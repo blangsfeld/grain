@@ -421,12 +421,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "grain_stats": {
-        const { data, error } = await db.rpc("grain_stats").single().catch(() => ({
-          data: null,
-          error: { message: "rpc not found" },
-        }));
-
-        // Fallback: manual query
+        // Direct query — no RPC needed
         const { data: counts } = await db
           .from("dx_atoms")
           .select("type")

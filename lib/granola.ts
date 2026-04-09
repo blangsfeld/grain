@@ -59,8 +59,20 @@ export function readLocalToken(): GranolaTokens | null {
   }
 }
 
-/** Read persisted tokens from project root. */
-export function getPersistedTokens(): GranolaTokens | null {
+/** Check if running in serverless/deployed mode (no local filesystem). */
+function isDeployed(): boolean {
+  return !!process.env.VERCEL || !!process.env.GRAIN_DEPLOYED;
+}
+
+/** Read persisted tokens — local file or Supabase depending on environment. */
+export async function getPersistedTokensAsync(): Promise<GranolaTokens | null> {
+  if (isDeployed()) {
+    return getTokensFromSupabase();
+  }
+  return getPersistedTokensLocal();
+}
+
+function getPersistedTokensLocal(): GranolaTokens | null {
   try {
     if (!existsSync(TOKEN_PERSIST_PATH)) return null;
     const raw = readFileSync(TOKEN_PERSIST_PATH, "utf-8");
@@ -70,11 +82,76 @@ export function getPersistedTokens(): GranolaTokens | null {
   }
 }
 
-/** Persist tokens atomically (write to temp, rename). */
-export function persistTokens(tokens: GranolaTokens): void {
+/** Kept for backward compat — synchronous local-only version. */
+export function getPersistedTokens(): GranolaTokens | null {
+  return getPersistedTokensLocal();
+}
+
+/** Persist tokens — local file and/or Supabase. */
+export async function persistTokensAsync(tokens: GranolaTokens): Promise<void> {
+  // Always try Supabase (for deployed mode)
+  await persistTokensToSupabase(tokens).catch(() => {});
+
+  // Also write locally if we can
+  if (!isDeployed()) {
+    persistTokensLocal(tokens);
+  }
+}
+
+function persistTokensLocal(tokens: GranolaTokens): void {
   const tmpPath = TOKEN_PERSIST_PATH + ".tmp";
   writeFileSync(tmpPath, JSON.stringify(tokens, null, 2), "utf-8");
   renameSync(tmpPath, TOKEN_PERSIST_PATH);
+}
+
+/** Kept for backward compat — synchronous local-only version. */
+export function persistTokens(tokens: GranolaTokens): void {
+  persistTokensLocal(tokens);
+  // Fire-and-forget Supabase persist
+  persistTokensToSupabase(tokens).catch(() => {});
+}
+
+// ─── Supabase token storage ──────────────────────
+
+async function getTokensFromSupabase(): Promise<GranolaTokens | null> {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return null;
+
+    const db = createClient(url, key);
+    const { data } = await db
+      .from("dx_config")
+      .select("value")
+      .eq("key", "granola_tokens")
+      .single();
+
+    if (!data?.value) return null;
+    return data.value as GranolaTokens;
+  } catch {
+    return null;
+  }
+}
+
+async function persistTokensToSupabase(tokens: GranolaTokens): Promise<void> {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return;
+
+    const db = createClient(url, key);
+    await db
+      .from("dx_config")
+      .upsert({
+        key: "granola_tokens",
+        value: tokens,
+        updated_at: new Date().toISOString(),
+      });
+  } catch {
+    // Non-fatal
+  }
 }
 
 /** Exchange refresh token for new token pair via WorkOS. */
@@ -124,16 +201,16 @@ function readClientId(): string | null {
  * Throws if unable to obtain a valid token.
  */
 export async function getValidAccessToken(): Promise<string> {
-  // 1. Try persisted tokens
-  let tokens = getPersistedTokens();
+  // 1. Try persisted tokens (Supabase in deployed, local file otherwise)
+  let tokens = await getPersistedTokensAsync();
 
-  // 2. If none, seed from Granola's local file
+  // 2. If none, seed from Granola's local file (only works locally)
   if (!tokens) {
     const local = readLocalToken();
     if (!local) {
       throw new Error("GRANOLA_UNAVAILABLE");
     }
-    persistTokens(local);
+    await persistTokensAsync(local);
     tokens = local;
   }
 

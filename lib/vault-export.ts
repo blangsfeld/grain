@@ -15,9 +15,16 @@ const VAULT_ROOT = join(homedir(), "Documents/Obsidian/Studio");
 const MEETINGS_DIR = join(VAULT_ROOT, "50-meetings");
 const WEEKLY_DIR = join(VAULT_ROOT, "40-patterns/weekly");
 
+/** Check if vault is accessible (local dev only, not Vercel). */
+function vaultAvailable(): boolean {
+  return existsSync(VAULT_ROOT);
+}
+
 // ─── Daily highlights ────────────────────────────
 
 export async function exportDailyHighlightsToVault(date: string): Promise<string | null> {
+  if (!vaultAvailable()) return null; // Skip on Vercel — no local filesystem
+
   const atoms = await getAtomsForDate(date);
   if (atoms.length === 0) return null;
 
