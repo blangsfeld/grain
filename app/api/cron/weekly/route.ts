@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateWeeklyDigest } from "@/lib/weekly-digest";
+import { refreshCompanyPages } from "@/lib/company-pages";
 
 export const maxDuration = 300;
 
@@ -32,6 +33,14 @@ export async function GET(req: NextRequest) {
 
     const result = await generateWeeklyDigest(weekStart, weekEnd);
 
+    // Refresh company pages after digest (non-fatal)
+    let companyPages = null;
+    try {
+      companyPages = await refreshCompanyPages();
+    } catch (cpErr) {
+      console.error("Company page refresh failed:", cpErr instanceof Error ? cpErr.message : cpErr);
+    }
+
     return NextResponse.json({
       success: true,
       week_start: weekStart,
@@ -40,6 +49,11 @@ export async function GET(req: NextRequest) {
       meeting_count: result.meeting_count,
       vault_path: result.vault_path,
       tokens: result.tokens,
+      company_pages: companyPages?.map((p) => ({
+        name: p.name,
+        updated: p.updated,
+        atoms: p.atomCount,
+      })),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

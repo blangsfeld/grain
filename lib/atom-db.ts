@@ -38,6 +38,7 @@ export interface AtomQuery {
   type?: AtomType | AtomType[];
   domain_id?: string;
   contact_name?: string;
+  search?: string;      // text search across content + source_title
   since?: string;       // ISO date
   until?: string;       // ISO date
   saved?: boolean;
@@ -47,6 +48,24 @@ export interface AtomQuery {
 
 export async function queryAtoms(query: AtomQuery): Promise<DxAtom[]> {
   const db = getSupabaseAdmin();
+
+  // Text search uses an RPC function that can cast JSONB to text in SQL
+  if (query.search) {
+    const typeFilter = query.type
+      ? Array.isArray(query.type) ? query.type : [query.type]
+      : null;
+
+    const { data, error } = await db.rpc("search_atoms", {
+      search_term: query.search,
+      type_filter: typeFilter,
+      max_results: query.limit ?? 50,
+    });
+
+    if (error) throw new Error(`search_atoms failed: ${error.message}`);
+    return (data || []) as DxAtom[];
+  }
+
+  // Standard query (no text search)
   let q = db
     .from("dx_atoms")
     .select("*")

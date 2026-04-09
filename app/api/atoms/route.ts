@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       type,
       domain_id: params.get("domain_id") ?? undefined,
       contact_name: params.get("contact") ?? undefined,
+      search: params.get("search") ?? undefined,
       since: params.get("since") ?? undefined,
       until: params.get("until") ?? undefined,
       saved: params.get("saved") === "true" ? true : undefined,
