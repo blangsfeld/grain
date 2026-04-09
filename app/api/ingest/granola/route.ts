@@ -23,8 +23,35 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // 1. Ingest new meetings
     const result = await ingestFromGranola();
-    return NextResponse.json({ success: true, ...result });
+
+    // 2. Generate yesterday's daily highlights
+    const { exportDailyHighlightsToVault } = await import("@/lib/vault-export");
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+    const vaultPath = await exportDailyHighlightsToVault(yesterday).catch(() => null);
+
+    // 3. On Mondays, generate last week's digest
+    let weeklyDigest = null;
+    const today = new Date();
+    if (today.getDay() === 1) {
+      const { generateWeeklyDigest } = await import("@/lib/weekly-digest");
+      const lastMonday = new Date(today);
+      lastMonday.setDate(today.getDate() - 7);
+      const lastSunday = new Date(today);
+      lastSunday.setDate(today.getDate() - 1);
+      weeklyDigest = await generateWeeklyDigest(
+        lastMonday.toISOString().split("T")[0],
+        lastSunday.toISOString().split("T")[0],
+      ).catch(() => null);
+    }
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+      vault_highlights: vaultPath,
+      weekly_digest: weeklyDigest ? { atoms: weeklyDigest.atom_count, path: weeklyDigest.vault_path } : null,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ success: false, error: message }, { status: 500 });
