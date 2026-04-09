@@ -114,17 +114,32 @@ export async function getAtomsForRange(
   until: string,
 ): Promise<DxAtom[]> {
   const db = getSupabaseAdmin();
-  const { data, error } = await db
-    .from("dx_atoms")
-    .select("*")
-    .gte("source_date", since)
-    .lte("source_date", until)
-    .eq("archived", false)
-    .order("source_date")
-    .order("type");
 
-  if (error) throw new Error(`getAtomsForRange failed: ${error.message}`);
-  return (data || []) as DxAtom[];
+  // Paginate to avoid Supabase 1000-row default limit
+  const allAtoms: DxAtom[] = [];
+  let offset = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    const { data, error } = await db
+      .from("dx_atoms")
+      .select("*")
+      .gte("source_date", since)
+      .lte("source_date", until)
+      .eq("archived", false)
+      .order("source_date")
+      .order("type")
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw new Error(`getAtomsForRange failed: ${error.message}`);
+    if (!data || data.length === 0) break;
+
+    allAtoms.push(...(data as DxAtom[]));
+    if (data.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  return allAtoms;
 }
 
 // ─── Update ──────────────────────────────────────

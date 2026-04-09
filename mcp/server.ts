@@ -421,17 +421,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "grain_stats": {
-        // Direct query — no RPC needed
-        const { data: counts } = await db
-          .from("dx_atoms")
-          .select("type")
-          .eq("archived", false);
-
+        // Count by type using individual count queries (avoids 1000 row limit)
+        const types = ["belief", "tension", "quote", "voice", "commitment", "read"];
         const typeCounts: Record<string, number> = {};
-        for (const row of counts || []) {
-          const t = (row as Record<string, unknown>).type as string;
-          typeCounts[t] = (typeCounts[t] || 0) + 1;
-        }
+        await Promise.all(
+          types.map(async (t) => {
+            const { count } = await db
+              .from("dx_atoms")
+              .select("*", { count: "exact", head: true })
+              .eq("type", t)
+              .eq("archived", false);
+            typeCounts[t] = count ?? 0;
+          })
+        );
 
         const { data: dateRange } = await db
           .from("dx_atoms")
