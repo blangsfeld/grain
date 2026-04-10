@@ -181,17 +181,108 @@ async function refreshAccessToken(
   };
 }
 
-/** Read WorkOS client_id from Granola's local file. */
-function readClientId(): string | null {
+/** Extract WorkOS client_id from a JWT's iss claim. */
+function extractClientIdFromJwt(jwt: string): string | null {
+  try {
+    const parts = jwt.split(".");
+    if (parts.length < 2) return null;
+    // Base64url decode the payload
+    const padded = parts[1] + "=".repeat((4 - (parts[1].length % 4)) % 4);
+    const normalized = padded.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(Buffer.from(normalized, "base64").toString("utf-8"));
+    // iss looks like: https://auth.granola.ai/user_management/client_01...
+    const iss = payload.iss as string | undefined;
+    if (!iss) return null;
+    const match = iss.match(/client_[A-Z0-9]+/);
+    return match ? match[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Read WorkOS client_id — from Granola's file or by extracting from current JWT. */
+function readClientIdLocal(): string | null {
   try {
     if (!existsSync(GRANOLA_LOCAL_PATH)) return null;
     const raw = readFileSync(GRANOLA_LOCAL_PATH, "utf-8");
     const data = JSON.parse(raw);
-    // Granola stores client_id at top level or inside workos config
-    return data.client_id ?? data.workos_client_id ?? null;
+    // Try direct field first
+    const direct = data.client_id ?? data.workos_client_id;
+    if (direct) return direct;
+    // Extract from JWT payload
+    try {
+      const tokens = typeof data.workos_tokens === "string"
+        ? JSON.parse(data.workos_tokens)
+        : data.workos_tokens;
+      if (tokens?.access_token) {
+        return extractClientIdFromJwt(tokens.access_token);
+      }
+    } catch {}
+    return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Get the WorkOS client_id needed for token refresh.
+ * Resolution order:
+ * 1. Supabase dx_config (durable, works on Vercel)
+ * 2. Granola local file (dev only)
+ * 3. Extract from current access token's JWT (works anywhere)
+ * Persists whatever it finds back to Supabase for next time.
+ */
+async function getClientId(currentAccessToken?: string): Promise<string | null> {
+  const saveToSupabase = async (clientId: string): Promise<void> => {
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) return;
+      const db = createClient(url, key);
+      await db.from("dx_config").upsert(
+        { key: "granola_client_id", value: clientId },
+        { onConflict: "key" }
+      );
+    } catch {}
+  };
+
+  // 1. Try Supabase
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (url && key) {
+      const db = createClient(url, key);
+      const { data } = await db
+        .from("dx_config")
+        .select("value")
+        .eq("key", "granola_client_id")
+        .single();
+      if (data?.value) {
+        const stored = typeof data.value === "string" ? data.value : (data.value as { client_id?: string }).client_id;
+        if (stored) return stored;
+      }
+    }
+  } catch {}
+
+  // 2. Local file
+  const local = readClientIdLocal();
+  if (local) {
+    await saveToSupabase(local);
+    return local;
+  }
+
+  // 3. Extract from current JWT
+  if (currentAccessToken) {
+    const extracted = extractClientIdFromJwt(currentAccessToken);
+    if (extracted) {
+      await saveToSupabase(extracted);
+      return extracted;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -230,7 +321,7 @@ export async function getValidAccessToken(): Promise<string> {
 
   // 4. Access token expired — try refresh
   if (testRes.status === 401) {
-    const clientId = readClientId();
+    const clientId = await getClientId(tokens.access_token);
     if (!clientId) {
       // Try re-reading local file (Granola may have refreshed it)
       const local = readLocalToken();
