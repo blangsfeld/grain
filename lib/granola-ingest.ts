@@ -23,14 +23,34 @@ import { insertAtoms } from "@/lib/atom-db";
 import { loadRegistries, resolveAtoms } from "@/lib/resolve";
 
 // ─── Sync state ──────────────────────────────────
+// Local: .granola-sync.json file
+// Vercel (read-only fs): Supabase dx_config
 
 const SYNC_PATH = join(process.cwd(), ".granola-sync.json");
+const SYNC_DB_KEY = "granola_sync_state";
 
 interface SyncState {
   last_synced_at: string;
 }
 
-function readSyncState(): SyncState | null {
+function isDeployed(): boolean {
+  return !!process.env.VERCEL || !!process.env.GRAIN_DEPLOYED;
+}
+
+async function readSyncState(): Promise<SyncState | null> {
+  if (isDeployed()) {
+    try {
+      const db = getSupabaseAdmin();
+      const { data } = await db
+        .from("dx_config")
+        .select("value")
+        .eq("key", SYNC_DB_KEY)
+        .single();
+      return (data?.value as SyncState) ?? null;
+    } catch {
+      return null;
+    }
+  }
   try {
     if (!existsSync(SYNC_PATH)) return null;
     return JSON.parse(readFileSync(SYNC_PATH, "utf-8"));
@@ -39,8 +59,19 @@ function readSyncState(): SyncState | null {
   }
 }
 
-function writeSyncState(state: SyncState): void {
-  writeFileSync(SYNC_PATH, JSON.stringify(state, null, 2), "utf-8");
+async function writeSyncState(state: SyncState): Promise<void> {
+  // Always write to Supabase when available (durable)
+  try {
+    const db = getSupabaseAdmin();
+    await db.from("dx_config").upsert({ key: SYNC_DB_KEY, value: state }, { onConflict: "key" });
+  } catch {}
+
+  // Also write local file when possible (faster read on dev)
+  if (!isDeployed()) {
+    try {
+      writeFileSync(SYNC_PATH, JSON.stringify(state, null, 2), "utf-8");
+    } catch {}
+  }
 }
 
 // ─── Transcript hashing (dedup) ──────────────────
@@ -76,7 +107,7 @@ export async function ingestFromGranola(options?: {
   const db = getSupabaseAdmin();
 
   // Determine start date
-  const syncState = readSyncState();
+  const syncState = await readSyncState();
   const since = options?.since ?? syncState?.last_synced_at ?? new Date(Date.now() - 7 * 86400000).toISOString();
 
   // Load entity registries once
@@ -203,7 +234,7 @@ export async function ingestFromGranola(options?: {
   }
 
   // Update sync state
-  writeSyncState({ last_synced_at: new Date().toISOString() });
+  await writeSyncState({ last_synced_at: new Date().toISOString() });
 
   return result;
 }
