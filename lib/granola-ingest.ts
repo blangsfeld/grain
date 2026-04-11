@@ -233,8 +233,13 @@ export async function ingestFromGranola(options?: {
     }
   }
 
-  // Update sync state
-  await writeSyncState({ last_synced_at: new Date().toISOString() });
+  // Update sync state with a 30-minute grace window.
+  // Granola transcripts take minutes to finalize after a meeting ends —
+  // meetings whose transcript was still processing during this run need a
+  // second chance on the next run, so don't advance past them.
+  const GRACE_WINDOW_MS = 30 * 60 * 1000;
+  const syncTimestamp = new Date(Date.now() - GRACE_WINDOW_MS).toISOString();
+  await writeSyncState({ last_synced_at: syncTimestamp });
 
   return result;
 }
@@ -247,8 +252,9 @@ async function fetchMeetingsSince(since: string): Promise<Array<{ id: string; ti
 
   let offset = 0;
   const limit = 50;
+  const MAX_OFFSET = 2000; // safety ceiling — never paginate past 2000 meetings
 
-  while (true) {
+  while (offset < MAX_OFFSET) {
     const batch = await listMeetings(limit, offset);
     if (batch.length === 0) break;
 

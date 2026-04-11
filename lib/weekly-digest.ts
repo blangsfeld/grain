@@ -177,7 +177,10 @@ function writeDigestToVault(
   weekLabel: string,
   atomCount: number,
   meetingCount: number,
-): string {
+): string | null {
+  // Non-fatal: skip when vault isn't accessible (Vercel serverless fs)
+  if (!existsSync(VAULT_ROOT)) return null;
+
   const startDate = new Date(weekStart);
   const weekNum = getISOWeek(startDate);
   const year = startDate.getFullYear();

@@ -99,12 +99,16 @@ export async function persistTokensAsync(tokens: GranolaTokens): Promise<void> {
 }
 
 function persistTokensLocal(tokens: GranolaTokens): void {
-  const tmpPath = TOKEN_PERSIST_PATH + ".tmp";
-  writeFileSync(tmpPath, JSON.stringify(tokens, null, 2), "utf-8");
-  renameSync(tmpPath, TOKEN_PERSIST_PATH);
+  // Non-fatal: Vercel's fs is read-only, so skip silently there
+  if (isDeployed()) return;
+  try {
+    const tmpPath = TOKEN_PERSIST_PATH + ".tmp";
+    writeFileSync(tmpPath, JSON.stringify(tokens, null, 2), "utf-8");
+    renameSync(tmpPath, TOKEN_PERSIST_PATH);
+  } catch {}
 }
 
-/** Kept for backward compat — synchronous local-only version. */
+/** Kept for backward compat — writes locally (no-op on Vercel) + fires Supabase persist. */
 export function persistTokens(tokens: GranolaTokens): void {
   persistTokensLocal(tokens);
   // Fire-and-forget Supabase persist
@@ -326,7 +330,7 @@ export async function getValidAccessToken(): Promise<string> {
       // Try re-reading local file (Granola may have refreshed it)
       const local = readLocalToken();
       if (local) {
-        persistTokens(local);
+        await persistTokensAsync(local);
         return local.access_token;
       }
       throw new Error("GRANOLA_EXPIRED");
@@ -337,14 +341,15 @@ export async function getValidAccessToken(): Promise<string> {
         tokens.refresh_token,
         clientId
       );
-      // CRITICAL: persist BEFORE using
-      persistTokens(newTokens);
+      // CRITICAL: persist to Supabase BEFORE returning so the new
+      // refresh_token isn't lost if the Vercel lambda tears down
+      await persistTokensAsync(newTokens);
       return newTokens.access_token;
     } catch {
       // Refresh failed — try re-reading local file as last resort
       const local = readLocalToken();
       if (local && local.access_token !== tokens.access_token) {
-        persistTokens(local);
+        await persistTokensAsync(local);
         return local.access_token;
       }
       throw new Error("GRANOLA_EXPIRED");

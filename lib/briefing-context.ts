@@ -166,11 +166,17 @@ async function buildMeetingIntel(
       continue;
     }
 
-    // Try by email domain
-    const emailDomain = attendee.email.split("@")[1];
-    if (emailDomain) {
-      const domainName = emailDomain.split(".")[0]; // "buck" from "buck.tv"
-      const domain = matchDomain(domainName, domains) ?? matchDomain(emailDomain, domains);
+    // Try by email domain — skip free email providers
+    const emailDomain = attendee.email.split("@")[1]?.toLowerCase();
+    const FREE_PROVIDERS = new Set([
+      "gmail.com", "yahoo.com", "hotmail.com", "outlook.com",
+      "icloud.com", "me.com", "mac.com", "aol.com", "live.com",
+      "proton.me", "protonmail.com",
+    ]);
+    if (emailDomain && !FREE_PROVIDERS.has(emailDomain)) {
+      // Try full domain first, then first segment ("buck" from "buck.tv")
+      const domainName = emailDomain.split(".")[0];
+      const domain = matchDomain(emailDomain, domains) ?? matchDomain(domainName, domains);
       if (domain && !matchedDomain) {
         matchedDomain = domain;
       }
@@ -228,8 +234,9 @@ function auditCommitments(commitments: DxAtom[], today: string): CommitmentAudit
     }
 
     // Ben's commitments that might need exec input (soft/aspirational conviction)
-    if (person && (person.toLowerCase().includes("ben") || person.toLowerCase() === "you") &&
-        (conviction === "soft" || conviction === "aspirational")) {
+    const personLower = person?.toLowerCase().trim() ?? "";
+    const isBen = personLower === "ben" || personLower === "ben langsfeld" || personLower === "you";
+    if (isBen && (conviction === "soft" || conviction === "aspirational")) {
       blocked.push(atom);
     }
 
