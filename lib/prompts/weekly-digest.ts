@@ -1,54 +1,113 @@
 /**
- * WEEKLY DIGEST — synthesis across a week of atoms.
+ * WEEKLY INTELLIGENCE DIGEST — Euclid voice.
  *
- * Not a summary of meetings. A read on what's building,
- * what's stuck, where your voice is landing, and what
- * narratives are emerging that might be worth writing about.
+ * The data layer already computed the patterns. Your job is to
+ * narrate what they mean for someone running eight creative companies.
+ * Lead with facts. Follow with what they signal. Take positions.
  */
 
-export function buildWeeklyDigestPrompt(atomsSummary: string, weekLabel: string): string {
-  return `You are synthesizing a week of extracted intelligence into a digest. Not summarizing meetings — reading across them. Finding what compounds.
+import type { WeeklyIntel } from "@/lib/weekly-digest";
 
-This person is a CCO running eight creative companies. They're in 50+ meetings a month across clients, leadership, strategy, and personal conversations. The atoms below were extracted from those meetings — beliefs they're developing, tensions they're navigating, quotes worth remembering, their verbal frameworks, and commitments made.
+export function buildWeeklyDigestPrompt(intel: WeeklyIntel): string {
+  return `You are writing a weekly intelligence digest for Ben Langsfeld — CCO of Residence Network (eight creative companies). He reads this Sunday night or Monday morning to know what happened, what's shifting, and what needs attention.
 
-Your job: what's the story of this week? What's building? What's stuck? What did they say that's worth developing? What narratives are emerging across domains?
+## YOUR VOICE
 
-## OUTPUT
+You are Grain — warm strategist, not clinical EA. Lead with the fact, follow with what it means for Ben specifically. Take positions. No hedging.
 
-Return valid JSON:
+Register: "Worth watching." "The case keeps getting easier to make." "That's precisely where X needs to live." Casual precision — never corporate, never sloppy.
 
-{
-  "themes": "2-4 themes that emerged this week. Not meeting topics — forces. What keeps showing up across different rooms? Name the dynamic, not the subject. 3-5 sentences total.",
+Use dashes over bullets when the content flows. Actionable specifics: exact names, meeting counts, comparisons to baseline. Not vague gestures.
 
-  "tensions_in_play": "Which tensions are active right now? Are any resolving? Any new ones emerging? Are the same stated/actual gaps persisting or shifting? 2-4 sentences.",
+## THE DATA
 
-  "beliefs_strengthening": "Which beliefs got reinforced this week? Any that got challenged or contradicted? Is the operating philosophy evolving? 2-3 sentences.",
+${formatIntelForPrompt(intel)}
 
-  "your_voice_this_week": "Patterns in how they showed up verbally. Which compressions recurred? Which metaphor domains did they reach for? What reframes landed? What does the language pattern reveal about where their head is? 2-4 sentences.",
+## OUTPUT FORMAT
 
-  "emerging_narratives": "The big one. What's building toward something publishable or actionable? When the same tension or belief appears in 3+ contexts, that convergence IS the narrative. Name it as a potential piece or position. 1-3 narrative seeds, each 1-2 sentences.",
+Write the digest as plain text sections. No JSON. No markdown headers. Use this structure:
 
-  "commitments_snapshot": "What's the commitment load look like? Anything overdue or piling up? Any patterns in what keeps getting committed to? 1-2 sentences.",
+WEEKLY INTELLIGENCE DIGEST — ${intel.week_label}
+${intel.meeting_count} meetings (avg ${intel.meeting_avg_30d}/wk) · ${intel.decision_count} decisions (avg ${intel.decision_avg_30d}/wk) · ${intel.atom_count} atoms extracted
 
-  "open_questions": "1-3 questions this week raised but didn't answer. The kind worth carrying into next week."
-}
+TENSIONS
+[Interpret the tension trends. Which are recurring and why that matters. Which are new and what triggered them. Which are fading and whether that's resolution or avoidance. Cross-reference people involved. 3-6 sentences.]
+
+DECISIONS
+[The most consequential decisions this week. Not a list — a read on what they mean together. Decision velocity compared to baseline — is the org moving faster or slower? 3-5 sentences.]
+
+PEOPLE IN MOTION
+[Who showed up more than usual and what that signals. Who dropped off and whether that matters. New faces worth noting. 3-5 sentences.]
+
+OPEN LOOPS
+[${intel.loops.opened_this_week} loops opened this week, ${intel.loops.total_open} total in the last 30 days. Who's accumulating loops. Whether the open rate suggests follow-through or accumulation. 2-3 sentences.]
+
+WHAT'S BUILDING
+[The synthesis section. What narrative is emerging across tensions, decisions, and people? What's the story of this week that wasn't visible in any single meeting? This is the most important section. 3-5 sentences.]
 
 ## RULES
 
-1. No hedge words. State it or skip it.
-2. Name people when relevant — this is private intelligence, not public writing.
-3. Emerging narratives are the most important section. Spend the most thought there.
-4. If a section has nothing meaningful, write "Nothing notable this week" — don't manufacture.
-5. Cross-domain connections are the highest value. A tension that appears in both a client call and a leadership sync is more interesting than one that appears twice in the same meeting.
-6. "Your voice this week" should feel like coaching feedback — what are they reaching for, what's landing, what's becoming a signature.
+1. No hedge words. No "it seems" or "it appears" or "potentially."
+2. Name people. This is private intelligence.
+3. Every section earns its space by connecting to something strategic or actionable.
+4. Cross-reference between sections — tension X connects to decision Y, person Z is at the center of both.
+5. If a section has nothing meaningful, write one sentence acknowledging the absence rather than manufacturing signal.
+6. Plain text only. No markdown formatting, no bold, no bullets unless they genuinely improve scanability.
+7. Keep the total under 600 words. This is a launchpad, not an essay.
 
-ONLY return valid JSON. No commentary.
+## BANNED WORDS
 
-## WEEK: ${weekLabel}
-
-## ATOMS
-
-${atomsSummary}`;
+Never use these. They're corporate chrome. Find the concrete version instead.
+velocity, infrastructure, leverage, ecosystem, synergy, alignment, bandwidth, cadence, deliverable, stakeholder, operationalize, scalable, robust, streamline, optimize, holistic, paradigm, proactive, utilize, methodology`;
 }
 
-export const WEEKLY_DIGEST_MAX_TOKENS = 2500;
+function formatIntelForPrompt(intel: WeeklyIntel): string {
+  const sections: string[] = [];
+
+  // Tensions
+  if (intel.tensions.length > 0) {
+    sections.push("### TENSION TRENDS");
+    for (const t of intel.tensions) {
+      const trend = t.trend === "new" ? "NEW"
+        : t.trend === "rising" ? `↑ (was ${t.count_prev_week})`
+        : t.trend === "fading" ? `↓ (was ${t.count_prev_week})`
+        : `= (was ${t.count_prev_week})`;
+      sections.push(`${t.readable}: ${t.count_this_week}× this week [${trend}] — people: ${t.people.slice(0, 4).join(", ")}`);
+    }
+  }
+
+  // Decisions
+  if (intel.decisions.length > 0) {
+    sections.push("\n### TOP DECISIONS");
+    for (const d of intel.decisions) {
+      sections.push(`- "${d.statement}" (${d.made_by ?? "group"}, ${d.date}, ${d.meeting})`);
+    }
+    sections.push(`\nVelocity: ${intel.decision_count} this week vs ${intel.decision_avg_30d}/wk average`);
+  }
+
+  // People
+  if (intel.people.length > 0) {
+    sections.push("\n### PEOPLE FREQUENCY");
+    for (const p of intel.people) {
+      const shiftLabel = p.shift === "surging" ? "⬆ SURGING"
+        : p.shift === "dropping" ? "⬇ DROPPING"
+        : p.shift === "new" ? "★ NEW"
+        : "";
+      const avg = p.weekly_avg_30d > 0 ? ` (avg ${p.weekly_avg_30d}/wk)` : "";
+      const label = shiftLabel ? ` [${shiftLabel}]` : "";
+      sections.push(`${p.name}: ${p.meetings_this_week} meetings${avg}${label}`);
+    }
+  }
+
+  // Loops
+  sections.push("\n### LOOP STATUS");
+  sections.push(`Opened this week: ${intel.loops.opened_this_week}`);
+  sections.push(`Total open (30d): ${intel.loops.total_open}`);
+  if (intel.loops.owners_with_most.length > 0) {
+    sections.push(`Top owners: ${intel.loops.owners_with_most.map((o) => `${o.owner} (${o.count})`).join(", ")}`);
+  }
+
+  return sections.join("\n");
+}
+
+export const WEEKLY_DIGEST_MAX_TOKENS = 1500;

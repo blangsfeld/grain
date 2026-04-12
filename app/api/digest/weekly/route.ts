@@ -20,15 +20,15 @@ export async function POST(req: NextRequest) {
       const results = await generateWeeklyDigestsBatch(body.since, body.until);
       const summary = results.map((r) => ({
         vault_path: r.vault_path,
-        atoms: r.atom_count,
-        meetings: r.meeting_count,
+        atoms: r.intel.atom_count,
+        meetings: r.intel.meeting_count,
         tokens: r.tokens,
       }));
 
       return NextResponse.json({
         success: true,
         weeks: summary.length,
-        total_atoms: results.reduce((s, r) => s + r.atom_count, 0),
+        total_atoms: results.reduce((s, r) => s + r.intel.atom_count, 0),
         total_tokens: results.reduce((s, r) => s + r.tokens, 0),
         results: summary,
       });

@@ -54,12 +54,16 @@ export async function buildBootContext(): Promise<void> {
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000).toISOString().slice(0, 10);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10);
 
-  const [tensions, decisions, people, loops] = await Promise.all([
+  const [tensions, decisions, people, unfilteredLoops, resolvedHashes] = await Promise.all([
     getTopTensions(db, fourteenDaysAgo),
     getRecentDecisions(db, fourteenDaysAgo),
     getActivePeople(db, sevenDaysAgo),
     getOpenLoops(db, fourteenDaysAgo),
+    getResolvedLoopHashes(db),
   ]);
+
+  // Filter out resolved loops
+  const loops = unfilteredLoops.filter((l) => !resolvedHashes.has(loopHash(l.statement)));
 
   const lines: string[] = [];
 
@@ -344,4 +348,21 @@ async function getOpenLoops(
   }
 
   return loops.slice(0, 15);
+}
+
+// ─── Resolved Loops ──────────────────────────────
+
+async function getResolvedLoopHashes(
+  db: ReturnType<typeof getSupabaseAdmin>,
+): Promise<Set<string>> {
+  const { data } = await db
+    .from("dx_resolved_loops")
+    .select("statement_hash");
+
+  return new Set((data ?? []).map((r) => r.statement_hash));
+}
+
+/** Hash a loop statement for matching against dx_resolved_loops. */
+export function loopHash(statement: string): string {
+  return statement.slice(0, 50).toLowerCase().trim();
 }

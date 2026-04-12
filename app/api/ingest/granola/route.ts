@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
       ...result,
       vault_highlights: vaultPath,
       briefing: briefingResult,
-      weekly_digest: weeklyDigest ? { atoms: weeklyDigest.atom_count, path: weeklyDigest.vault_path } : null,
+      weekly_digest: weeklyDigest ? { atoms: weeklyDigest.intel.atom_count, path: weeklyDigest.vault_path } : null,
       company_pages: companyPages,
     });
   } catch (err) {

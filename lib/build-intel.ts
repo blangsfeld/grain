@@ -10,9 +10,15 @@ import { homedir } from "os";
 
 const APPS_DIR = join(homedir(), "Documents/Apps");
 
+interface CommitInfo {
+  hash: string;
+  author: string;
+  message: string;
+}
+
 interface RepoActivity {
   name: string;
-  commits: string[];
+  commits: CommitInfo[];
   filesChanged: number;
 }
 
@@ -34,13 +40,16 @@ export async function gatherBuildIntel(days: number): Promise<string | null> {
 
     try {
       const log = execSync(
-        `git log --oneline --since="${days} days ago" --no-merges 2>/dev/null`,
+        `git log --format="%h||%an||%s" --since="${days} days ago" --no-merges 2>/dev/null`,
         { cwd: repoPath, encoding: "utf-8", timeout: 5000 },
       ).trim();
 
       if (!log) continue;
 
-      const commits = log.split("\n").filter(Boolean);
+      const commits: CommitInfo[] = log.split("\n").filter(Boolean).map((line) => {
+        const [hash, author, ...messageParts] = line.split("||");
+        return { hash, author, message: messageParts.join("||") };
+      });
 
       // Count files changed
       let filesChanged = 0;
@@ -72,9 +81,19 @@ export async function gatherBuildIntel(days: number): Promise<string | null> {
   repos.sort((a, b) => b.commits.length - a.commits.length);
 
   for (const repo of repos) {
-    lines.push(`\n**${repo.name}** (${repo.commits.length} commits, ${repo.filesChanged} files)`);
+    // Summarize authors
+    const authorCounts = new Map<string, number>();
+    for (const c of repo.commits) {
+      authorCounts.set(c.author, (authorCounts.get(c.author) ?? 0) + 1);
+    }
+    const authorSummary = [...authorCounts.entries()]
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ");
+
+    lines.push(`\n**${repo.name}** (${repo.commits.length} commits, ${repo.filesChanged} files) — by ${authorSummary}`);
     for (const commit of repo.commits.slice(0, 5)) {
-      lines.push(`  - ${commit}`);
+      lines.push(`  - ${commit.message} (${commit.author})`);
     }
     if (repo.commits.length > 5) {
       lines.push(`  - ...and ${repo.commits.length - 5} more`);

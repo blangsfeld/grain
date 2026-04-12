@@ -285,13 +285,16 @@ async function fetchLatestWeeklyDigest(): Promise<string | null> {
     const { join } = await import("path");
     const { homedir } = await import("os");
 
-    const weeklyDir = join(homedir(), "Documents/Obsidian/Studio/40-patterns/weekly");
-    if (!existsSync(weeklyDir)) return null;
+    const agentsDir = join(homedir(), "Documents/Obsidian/Studio/70-agents");
+    if (!existsSync(agentsDir)) return null;
 
-    const files = readdirSync(weeklyDir).filter((f) => f.endsWith(".md")).sort().reverse();
+    const files = readdirSync(agentsDir)
+      .filter((f) => f.startsWith("weekly-digest-") && f.endsWith(".md"))
+      .sort()
+      .reverse();
     if (files.length === 0) return null;
 
-    return readFileSync(join(weeklyDir, files[0]), "utf-8");
+    return readFileSync(join(agentsDir, files[0]), "utf-8");
   } catch {
     return null;
   }
