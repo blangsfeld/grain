@@ -109,7 +109,17 @@ export function resolveAtoms(
   }
 }
 
-/** Extract person/org names mentioned in an atom's content. */
+/**
+ * Extract person/org names mentioned in an atom's content.
+ *
+ * Convention: each atom type contributes whatever name-bearing fields
+ * it has. New atom types MUST add their name-bearing fields here or
+ * they will not participate in entity resolution (contact_ids, domain
+ * stamping) during `resolveAtoms`. Silent absence from this function
+ * is the main way new atoms fall off the knowledge graph — if a new
+ * atom type lands and its entities column comes out empty, this is
+ * almost always the place to look.
+ */
 function extractNamesFromAtom(atom: DxAtomInsert): string[] {
   const names: string[] = [];
   const c = atom.content as unknown as Record<string, unknown>;
@@ -122,6 +132,16 @@ function extractNamesFromAtom(atom: DxAtomInsert): string[] {
   // Commitment person/company
   if (typeof c.person === "string") names.push(c.person);
   if (typeof c.company === "string") names.push(c.company);
+
+  // Decision author
+  if (typeof c.made_by === "string") names.push(c.made_by);
+
+  // Relationships meta atom — people[].name
+  if (Array.isArray((c as { people?: unknown }).people)) {
+    for (const p of (c as { people: Array<{ name?: unknown }> }).people) {
+      if (p && typeof p.name === "string") names.push(p.name);
+    }
+  }
 
   return names;
 }

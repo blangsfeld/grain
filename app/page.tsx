@@ -36,9 +36,11 @@ const TYPE_COLORS: Record<AtomType, string> = {
   voice: "bg-emerald-500/20 text-emerald-300",
   commitment: "bg-rose-500/20 text-rose-300",
   read: "bg-zinc-500/20 text-zinc-300",
+  decision: "bg-fuchsia-500/20 text-fuchsia-300",
+  relationships: "bg-teal-500/20 text-teal-300",
 };
 
-const ALL_TYPES: AtomType[] = ["belief", "tension", "quote", "voice", "commitment", "read"];
+const ALL_TYPES: AtomType[] = ["belief", "tension", "quote", "voice", "commitment", "read", "decision", "relationships"];
 
 // ─── Atom content rendering ─────────────────────
 

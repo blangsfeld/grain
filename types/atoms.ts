@@ -13,7 +13,9 @@ export type AtomType =
   | "quote"
   | "voice"
   | "commitment"
-  | "read";
+  | "read"
+  | "decision"
+  | "relationships";
 
 // ─── Content shapes per type ─────────────────────
 
@@ -65,13 +67,43 @@ export interface ReadContent {
   the_read: string;
 }
 
+export interface DecisionContent {
+  statement: string;
+  type: "structural" | "strategic" | "personnel" | "product" | "financial";
+  made_by: string;
+  context: string;
+  alternatives_considered: string | null;
+  linked_tension: string | null;
+  confidence: "confirmed" | "tentative";
+}
+
+export interface RelationshipsPayload {
+  people: Array<{
+    name: string;
+    role: string;
+    pattern_observed: string;
+    psychology: string;
+    tension_involved: string | null;
+    energy: "generative" | "tense" | "neutral";
+  }>;
+  tension_slugs: string[];
+  loops_opened: Array<{
+    statement: string;
+    owner: string;
+    deadline: string | null;
+    linked_tension: string | null;
+  }>;
+}
+
 export type AtomContent =
   | BeliefContent
   | TensionContent
   | QuoteContent
   | VoiceContent
   | CommitmentContent
-  | ReadContent;
+  | ReadContent
+  | DecisionContent
+  | RelationshipsPayload;
 
 // ─── Database row ────────────────────────────────
 
@@ -103,11 +135,25 @@ export interface DxAtomInsert {
   domain?: string;
   domain_id?: string;
   contact_ids?: string[];
+  /**
+   * Meta atoms flow through extraction + resolve but are filtered out
+   * before `insertAtoms`. Their payload is persisted elsewhere (e.g.,
+   * `dx_transcripts.meta_relationships`), not into `dx_atoms`.
+   */
+  meta?: boolean;
 }
 
 // ─── Extraction plan ─────────────────────────────
 
-export type AtomPass = "read" | "quotes" | "beliefs" | "tensions" | "voice" | "commitments";
+export type AtomPass =
+  | "read"
+  | "quotes"
+  | "beliefs"
+  | "tensions"
+  | "voice"
+  | "commitments"
+  | "decisions"
+  | "relationships";
 
 export interface ExtractionPlan {
   passes: AtomPass[];

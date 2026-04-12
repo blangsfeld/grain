@@ -12,15 +12,15 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import {
   listMeetings,
   getTranscript,
-  getMeetingWithNotes,
+  getNote,
   formatTranscript,
-  parseNotesMetadata,
   deriveMeetingDate,
 } from "@/lib/granola";
 import { classifyTranscript, getExtractionPlan } from "@/lib/classify";
 import { extractAtoms } from "@/lib/atom-extract";
 import { insertAtoms } from "@/lib/atom-db";
 import { loadRegistries, resolveAtoms } from "@/lib/resolve";
+import { buildBootContext } from "@/lib/vault-scan";
 
 // ─── Sync state ──────────────────────────────────
 // Local: .granola-sync.json file
@@ -139,15 +139,26 @@ export async function ingestFromGranola(options?: {
         continue;
       }
 
-      // Get notes metadata for participant names
-      const meetingWithNotes = await getMeetingWithNotes(meeting.id);
-      const notesMeta = meetingWithNotes?.last_viewed_panel?.content
-        ? parseNotesMetadata(meetingWithNotes.last_viewed_panel.content)
-        : { participants: [] };
+      // Get attendees from Granola's calendar data
+      const noteDetail = await getNote(meeting.id);
+      const ownerEmail = noteDetail.owner?.email;
+      // Filter out meeting rooms (@resource.calendar.google.com) and the owner
+      const attendees = (noteDetail.attendees ?? []).filter(
+        (a) => !a.email.includes("@resource.calendar.google.com"),
+      );
+      const participantNames = attendees
+        .filter((a) => a.email !== ownerEmail)
+        .map((a) => a.name);
+      // Structured participants for DB persistence (includes owner, excludes rooms)
+      const participants = attendees.map((a) => ({
+        name: a.name,
+        email: a.email,
+        is_owner: a.email === ownerEmail,
+      }));
 
       // Format transcript
       const meetingDate = deriveMeetingDate(utterances, meeting.created_at);
-      const transcript = formatTranscript(utterances, meeting.title, meetingDate, notesMeta.participants);
+      const transcript = formatTranscript(utterances, meeting.title, meetingDate, participantNames);
 
       // Dedup check — reuse existing transcript or create new
       const hash = hashTranscript(transcript);
@@ -167,6 +178,10 @@ export async function ingestFromGranola(options?: {
       let transcriptId: string;
       if (existing) {
         transcriptId = existing.id;
+        // Always update participants on re-encounter (they may have been missing)
+        await db.from("dx_transcripts")
+          .update({ participants })
+          .eq("id", transcriptId);
       } else {
         const { data: txRecord, error: txError } = await db
           .from("dx_transcripts")
@@ -178,6 +193,7 @@ export async function ingestFromGranola(options?: {
             transcript_hash: hash,
             word_count: transcript.split(/\s+/).length,
             inbox_status: "approved",
+            participants,
           })
           .select("id")
           .single();
@@ -205,11 +221,33 @@ export async function ingestFromGranola(options?: {
         atom.source_date = meetingDate;
       }
 
-      // Resolve entities
+      // Resolve entities (meta atoms participate in resolve so their
+      // contact_ids/domain are computed before they're filtered out)
       resolveAtoms(extraction.atoms, contacts, domains);
 
-      // Insert atoms
-      await insertAtoms(extraction.atoms);
+      // Split meta atoms from persist atoms. Meta atoms never hit dx_atoms;
+      // their payload is persisted to dedicated columns on dx_transcripts.
+      const metaAtoms = extraction.atoms.filter((a) => a.meta);
+      const persistAtoms = extraction.atoms.filter((a) => !a.meta);
+
+      // Persist the relationships meta atom payload to dx_transcripts.
+      // On --force re-ingest this overwrites (not merges) — intentional.
+      const relationshipsAtom = metaAtoms.find((a) => a.type === "relationships");
+      if (relationshipsAtom) {
+        const { error: metaError } = await db
+          .from("dx_transcripts")
+          .update({ meta_relationships: relationshipsAtom.content })
+          .eq("id", transcriptId);
+        if (metaError) {
+          console.error(
+            `meta_relationships update failed for "${meeting.title}":`,
+            metaError.message,
+          );
+        }
+      }
+
+      // Insert atoms (meta atoms excluded)
+      await insertAtoms(persistAtoms);
 
       // Tally
       result.processed++;
@@ -230,6 +268,15 @@ export async function ingestFromGranola(options?: {
         status: "error",
         error: errMsg,
       } as typeof result.meetings[0]);
+    }
+  }
+
+  // Post-loop: rebuild boot context from DB. Failures never roll back DB state.
+  if (result.processed > 0) {
+    try {
+      await buildBootContext();
+    } catch (err) {
+      console.error("buildBootContext failed:", err instanceof Error ? err.message : err);
     }
   }
 

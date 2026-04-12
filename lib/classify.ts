@@ -140,9 +140,15 @@ export function getExtractionPlan(c: Classification): ExtractionPlan {
   if (c.source_grade) {
     passes.push("beliefs");
     passes.push("tensions");
+    passes.push("decisions");
     if (c.recommended_lens === "practitioner") {
       passes.push("voice");
     }
+  }
+
+  // Relationships pass — runs on any substantive meeting
+  if (c.source_grade || c.has_commitments) {
+    passes.push("relationships");
   }
 
   return {

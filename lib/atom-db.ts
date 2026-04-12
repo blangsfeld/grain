@@ -10,6 +10,18 @@ import type { DxAtom, DxAtomInsert, AtomType } from "@/types/atoms";
 export async function insertAtoms(atoms: DxAtomInsert[]): Promise<DxAtom[]> {
   if (atoms.length === 0) return [];
 
+  // Defensive backstop: meta atoms must never hit dx_atoms. Callers are
+  // expected to have split them out already (see granola-ingest.ts). If
+  // any slip through this is a programming error, not expected flow.
+  const metaCount = atoms.filter((a) => a.meta).length;
+  if (metaCount > 0) {
+    console.warn(
+      `insertAtoms: filtering out ${metaCount} meta atom(s) — callers should split these before calling.`,
+    );
+    atoms = atoms.filter((a) => !a.meta);
+    if (atoms.length === 0) return [];
+  }
+
   const db = getSupabaseAdmin();
   const rows = atoms.map((a) => ({
     type: a.type,

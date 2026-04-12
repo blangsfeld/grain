@@ -10,15 +10,13 @@ import { buildBeliefsPrompt, BELIEFS_MAX_TOKENS } from "@/lib/prompts/beliefs";
 import { buildTensionsPrompt, TENSIONS_MAX_TOKENS } from "@/lib/prompts/tensions";
 import { buildVoicePrompt, VOICE_MAX_TOKENS } from "@/lib/prompts/voice";
 import { buildCommitmentsPrompt, COMMITMENTS_MAX_TOKENS } from "@/lib/prompts/commitments";
+import { buildDecisionsPrompt, DECISIONS_MAX_TOKENS } from "@/lib/prompts/decisions";
+import { buildRelationshipsPrompt, RELATIONSHIPS_MAX_TOKENS } from "@/lib/prompts/relationships";
 import type {
   AtomPass,
   AtomType,
   DxAtomInsert,
-  BeliefContent,
-  TensionContent,
-  QuoteContent,
-  VoiceContent,
-  CommitmentContent,
+  RelationshipsPayload,
   ReadContent,
 } from "@/types/atoms";
 
@@ -70,6 +68,18 @@ const PASS_CONFIG: Record<AtomPass, PassConfig> = {
     atomType: "commitment",
     temperature: 0.1,
   },
+  decisions: {
+    buildPrompt: buildDecisionsPrompt,
+    maxTokens: DECISIONS_MAX_TOKENS,
+    atomType: "decision",
+    temperature: 0.2,
+  },
+  relationships: {
+    buildPrompt: buildRelationshipsPrompt,
+    maxTokens: RELATIONSHIPS_MAX_TOKENS,
+    atomType: "relationships",
+    temperature: 0.2,
+  },
 };
 
 /** Run a single extraction pass. Returns atoms of one type. */
@@ -104,6 +114,16 @@ async function runPass(
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       atoms.push({ type: "read", content: parsed as ReadContent });
     }
+  } else if (config.atomType === "relationships") {
+    // Relationships is a meta atom — single object payload, filtered
+    // out before insertAtoms and persisted to dx_transcripts.meta_relationships.
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      atoms.push({
+        type: "relationships",
+        meta: true,
+        content: parsed as RelationshipsPayload,
+      });
+    }
   } else {
     // Other passes produce arrays of items
     const items = Array.isArray(parsed) ? parsed : [];
@@ -117,9 +137,10 @@ async function runPass(
 
 /** Parse JSON from Claude response. Handles both objects and arrays. */
 function parseJsonResponse(text: string, atomType: AtomType): unknown {
+  const isObjectShape = atomType === "read" || atomType === "relationships";
   try {
     // Try to find JSON in the response
-    if (atomType === "read") {
+    if (isObjectShape) {
       const match = text.match(/\{[\s\S]*\}/);
       if (match) return JSON.parse(match[0]);
     } else {
@@ -134,7 +155,7 @@ function parseJsonResponse(text: string, atomType: AtomType): unknown {
   try {
     return JSON.parse(text);
   } catch {
-    return atomType === "read" ? null : [];
+    return isObjectShape ? null : [];
   }
 }
 
