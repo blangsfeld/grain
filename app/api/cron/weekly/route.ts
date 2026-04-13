@@ -6,11 +6,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWeeklyDigest } from "@/lib/weekly-digest";
 import { refreshCompanyPages } from "@/lib/company-pages";
-import { sendEmail } from "@/lib/google";
+import { sendEmail } from "@/lib/resend";
 
 export const maxDuration = 300;
 
-const DELIVERY_EMAIL = "ben@residence.co";
+const DELIVERY_EMAIL = process.env.BRIEFING_EMAIL ?? "blangsfeld@gmail.com";
 
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -37,18 +37,18 @@ export async function GET(req: NextRequest) {
     const result = await generateWeeklyDigest(weekStart, weekEnd);
 
     // Email delivery (non-fatal)
-    let emailSent = false;
+    let emailResult: { id: string } | { error: string } | null = null;
     if (result.narrative && result.intel.meeting_count > 0) {
       try {
-        await sendEmail({
+        emailResult = await sendEmail({
           to: DELIVERY_EMAIL,
           subject: `Grain — ${result.intel.week_label}`,
-          plainBody: result.narrative,
-          htmlBody: result.narrative,
+          text: result.narrative,
         });
-        emailSent = true;
       } catch (emailErr) {
-        console.error("Weekly digest email failed:", emailErr instanceof Error ? emailErr.message : emailErr);
+        const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+        console.error("Weekly digest email failed:", msg);
+        emailResult = { error: msg };
       }
     }
 
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       decision_count: result.intel.decision_count,
       tensions: result.intel.tensions.length,
       vault_path: result.vault_path,
-      email_sent: emailSent,
+      email: emailResult,
       tokens: result.tokens,
       company_pages: companyPages?.map((p) => ({
         name: p.name,

@@ -311,43 +311,4 @@ async function getGmailThreadMeta(threadId: string): Promise<GmailThread | null>
   }
 }
 
-// ─── Gmail Send ─────────────────────────────────
-
-/**
- * Send an email via Gmail API.
- * Requires gmail.send scope (add to OAuth consent if not present).
- */
-export async function sendEmail(opts: {
-  to: string;
-  subject: string;
-  htmlBody: string;
-  plainBody?: string;
-}): Promise<void> {
-  // RFC 2047 encode subject for UTF-8 safety
-  const encodedSubject = `=?UTF-8?B?${Buffer.from(opts.subject).toString("base64")}?=`;
-
-  const body = opts.plainBody ?? opts.htmlBody;
-  const contentType = opts.plainBody ? "text/plain" : "text/html";
-
-  const raw = [
-    `To: ${opts.to}`,
-    `Subject: ${encodedSubject}`,
-    `Content-Type: ${contentType}; charset=utf-8`,
-    "Content-Transfer-Encoding: base64",
-    "MIME-Version: 1.0",
-    "",
-    Buffer.from(body).toString("base64"),
-  ].join("\r\n");
-
-  const encoded = Buffer.from(raw)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-
-  await authedPost(
-    `${GMAIL_BASE}/users/me/messages/send`,
-    JSON.stringify({ raw: encoded }),
-    "application/json",
-  );
-}
+// Gmail send removed — email delivery now handled by Resend (lib/resend.ts)

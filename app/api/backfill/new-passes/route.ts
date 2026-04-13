@@ -20,7 +20,7 @@ import { listNotes, getNote } from "@/lib/granola";
 import { exportDailyHighlightsToVault } from "@/lib/vault-export";
 import type { AtomPass, DxAtomInsert } from "@/types/atoms";
 
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;

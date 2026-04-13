@@ -84,15 +84,20 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        // Email (non-fatal)
-        await deliverBriefingEmail({ content, date: ctx.date, mode: ctx.mode }).catch((e) =>
-          console.error("Briefing email failed:", e instanceof Error ? e.message : e)
-        );
+        // Email
+        let emailResult: { id: string } | { error: string } | null = null;
+        try {
+          emailResult = await deliverBriefingEmail({ content, date: ctx.date, mode: ctx.mode });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error("Briefing email failed:", msg);
+          emailResult = { error: msg };
+        }
 
-        // Vault archive (non-fatal)
+        // Vault archive (non-fatal on Vercel — no filesystem)
         archiveBriefingToVault({ content, date: ctx.date, mode: ctx.mode, tokens, eventCount: ctx.events.length });
 
-        briefingResult = { mode: ctx.mode, tokens, events: ctx.events.length };
+        briefingResult = { mode: ctx.mode, tokens, events: ctx.events.length, email: emailResult };
       } catch (briefingErr) {
         console.error("Briefing failed:", briefingErr instanceof Error ? briefingErr.message : briefingErr);
         briefingResult = { error: briefingErr instanceof Error ? briefingErr.message : "Unknown" };
