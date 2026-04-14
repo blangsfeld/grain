@@ -54,6 +54,7 @@ WHAT'S BUILDING
 5. If a section has nothing meaningful, write one sentence acknowledging the absence rather than manufacturing signal.
 6. Plain text only. No markdown formatting, no bold, no bullets unless they genuinely improve scanability.
 7. Keep the total under 600 words. This is a launchpad, not an essay.
+8. Tensions are navigational, not alarming. They show where energy is flowing — four rooms working the same question is engagement, not crisis. Never use alarm language: "concerning," "worrying," "critical," "unresolved conflict."
 
 ## BANNED WORDS
 

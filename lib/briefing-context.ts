@@ -42,6 +42,13 @@ export interface ExecAnticipation {
   relevantAtoms: DxAtom[];        // Atoms matching what this exec cares about
 }
 
+export interface PlanItem {
+  priority: string;                // "Priority 1", "Priority 2", etc.
+  quarter: string;                 // "Q1", "Q2", "Q3-Q4"
+  text: string;                    // The commitment text
+  people: string[];                // Names mentioned in the item
+}
+
 export interface BriefingContext {
   mode: BriefingMode;
   date: string;
@@ -56,6 +63,7 @@ export interface BriefingContext {
   commitmentAudit?: CommitmentAudit;
   execAnticipation?: ExecAnticipation[];
   weeklyDigestThemes?: string | null;        // Latest weekly digest content
+  planItems?: PlanItem[];                    // Unchecked Forward Plan commitments for current quarter
 }
 
 // ─── Main Assembly ──────────────────────────────
@@ -112,10 +120,11 @@ export async function assembleBriefingContext(mode?: BriefingMode): Promise<Brie
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split("T")[0];
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000).toISOString().split("T")[0];
 
-    const [weekAtoms, recentCommitments, weeklyDigest] = await Promise.all([
+    const [weekAtoms, recentCommitments, weeklyDigest, planItems] = await Promise.all([
       queryAtoms({ since: sevenDaysAgo, archived: false, limit: 500 }),
       queryAtoms({ type: "commitment", since: fourteenDaysAgo, archived: false, limit: 200 }),
       fetchLatestWeeklyDigest(),
+      loadForwardPlanItems(now),
     ]);
 
     // Group week atoms by domain
@@ -135,6 +144,34 @@ export async function assembleBriefingContext(mode?: BriefingMode): Promise<Brie
 
     // Weekly digest themes
     context.weeklyDigestThemes = weeklyDigest;
+
+    // Forward Plan commitments for current quarter
+    context.planItems = planItems;
+  } else {
+    // Daily: load plan items relevant to today's meetings (by people match)
+    const planItems = await loadForwardPlanItems(now);
+    if (planItems.length > 0 && meetingIntels.length > 0) {
+      const attendeeNames = new Set(
+        meetingIntels.flatMap((m) => m.matchedContacts.map((c) => c.canonical_name))
+      );
+      const domainNames = new Set(
+        meetingIntels.map((m) => m.matchedDomain?.canonical_name).filter(Boolean)
+      );
+      const relevant = planItems.filter((item) =>
+        item.people.some((p) => {
+          // Match plan people against attendee names (partial match — "Emily Rickard" matches "Emily")
+          for (const name of attendeeNames) {
+            if (name.includes(p) || p.includes(name)) return true;
+          }
+          return false;
+        }) ||
+        // Also match by domain name in item text
+        [...domainNames].some((d) => d && item.text.toLowerCase().includes(d.toLowerCase()))
+      );
+      if (relevant.length > 0) {
+        context.planItems = relevant;
+      }
+    }
   }
 
   return context;
@@ -300,6 +337,110 @@ async function fetchLatestWeeklyDigest(): Promise<string | null> {
   }
 }
 
+// ─── Forward Plan Loader ──────────────────────────
+
+function currentQuarter(date: Date): string[] {
+  const month = date.getMonth() + 1;
+  if (month <= 3) return ["Q1"];
+  if (month <= 6) return ["Q1", "Q2"];        // Q2 shows Q1 carryover too
+  if (month <= 9) return ["Q2", "Q3-Q4"];
+  return ["Q3-Q4"];
+}
+
+const KNOWN_PEOPLE = [
+  // CCO plan
+  "Wade", "Orion", "Ryan Honey", "Ryan Castaldo", "Emily Rickard",
+  "Jay Grandin", "Kevin Walker", "Daniel Oeffinger", "Daniell Phillips",
+  "Madison Wharton", "Jan Jensen", "Charlotte Williams", "Albert Banks",
+  "Nick Carmen",
+  // Company extracts
+  "Luisa Murray", "Thomas Ragger", "Felix Häusler",
+  "Michael", "Vartan", "Joselyn Bickford",
+  "Rob Mordue", "Becca Sawyer", "Will Hudson", "Alex Bec",
+  "Teresa Toews", "Roshannah Bagley",
+];
+
+function extractPeople(text: string): string[] {
+  return KNOWN_PEOPLE.filter((name) => text.includes(name));
+}
+
+async function loadForwardPlanItems(now: Date): Promise<PlanItem[]> {
+  try {
+    const { readFileSync, existsSync, readdirSync } = await import("fs");
+    const { join } = await import("path");
+    const { homedir } = await import("os");
+
+    const plansDir = join(homedir(), "Documents/Obsidian/Studio/10-projects/forward-plans");
+    if (!existsSync(plansDir)) return [];
+
+    const items: PlanItem[] = [];
+    const quarters = currentQuarter(now);
+
+    // ── CCO plan: parse checkboxes by priority/quarter ──
+    const ccoPath = join(plansDir, "cco-2026.md");
+    if (existsSync(ccoPath)) {
+      const content = readFileSync(ccoPath, "utf-8");
+      let currentPriority = "";
+      let currentQ = "";
+
+      for (const line of content.split("\n")) {
+        const priorityMatch = line.match(/^## (Priority \d.*)/);
+        if (priorityMatch) { currentPriority = priorityMatch[1]; continue; }
+
+        const quarterMatch = line.match(/^### (Q\d(?:-Q\d)?)/);
+        if (quarterMatch) { currentQ = quarterMatch[1]; continue; }
+
+        const sectionMatch = line.match(/^## ((?!Priority|Key Relationships|Budget).+)/);
+        if (sectionMatch) {
+          currentPriority = sectionMatch[1];
+          currentQ = quarters[0];
+          continue;
+        }
+
+        if (line.startsWith("- [ ] ") && quarters.includes(currentQ)) {
+          items.push({
+            priority: currentPriority,
+            quarter: currentQ,
+            text: line.replace("- [ ] ", "").trim(),
+            people: extractPeople(line),
+          });
+        }
+      }
+    }
+
+    // ── Company extracts: parse CCO INTERSECTION items ──
+    const companyFiles = readdirSync(plansDir)
+      .filter((f) => f.endsWith("-2026.md") && f !== "cco-2026.md" && !f.startsWith("README"));
+
+    for (const file of companyFiles) {
+      const content = readFileSync(join(plansDir, file), "utf-8");
+      const companyMatch = content.match(/^## (.+)/m);
+      const company = companyMatch?.[1] ?? file.replace("-2026.md", "");
+      let inIntersection = false;
+
+      for (const line of content.split("\n")) {
+        if (line.startsWith("CCO INTERSECTION:")) { inIntersection = true; continue; }
+        if (/^(GAPS|KEY RELATIONSHIPS|QUARTERLY|DIRECTION)/.test(line)) { inIntersection = false; continue; }
+
+        if (inIntersection && line.startsWith("- ")) {
+          const priorityMatch = line.match(/Priority (\d)/);
+          const priority = priorityMatch ? `Priority ${priorityMatch[1]}` : "Network";
+          items.push({
+            priority: `${company} → ${priority}`,
+            quarter: quarters[quarters.length - 1], // Current quarter
+            text: line.replace(/^- /, "").trim(),
+            people: extractPeople(line),
+          });
+        }
+      }
+    }
+
+    return items;
+  } catch {
+    return [];
+  }
+}
+
 // ─── Format for Prompt ──────────────────────────
 
 export function formatBriefingContext(ctx: BriefingContext): string {
@@ -395,6 +536,16 @@ export function formatBriefingContext(ctx: BriefingContext): string {
     lines.push("");
   }
 
+  // Daily plan context — plan items relevant to today's meetings
+  if (ctx.mode === "daily" && ctx.planItems && ctx.planItems.length > 0) {
+    lines.push("## FORWARD PLAN CONTEXT (items connected to today's meetings)");
+    for (const item of ctx.planItems) {
+      const people = item.people.length > 0 ? ` (${item.people.join(", ")})` : "";
+      lines.push(`  - [${item.priority}] ${item.text}${people}`);
+    }
+    lines.push("");
+  }
+
   // Monday-only sections
   if (ctx.mode === "monday") {
     // Week in review
@@ -480,6 +631,24 @@ export function formatBriefingContext(ctx: BriefingContext): string {
         }
         lines.push("");
       }
+    }
+
+    // Forward Plan items
+    if (ctx.planItems && ctx.planItems.length > 0) {
+      lines.push("## FORWARD PLAN — OPEN COMMITMENTS (current quarter)");
+      const byPriority: Record<string, PlanItem[]> = {};
+      for (const item of ctx.planItems) {
+        if (!byPriority[item.priority]) byPriority[item.priority] = [];
+        byPriority[item.priority].push(item);
+      }
+      for (const [priority, items] of Object.entries(byPriority)) {
+        lines.push(`${priority}:`);
+        for (const item of items) {
+          const people = item.people.length > 0 ? ` (${item.people.join(", ")})` : "";
+          lines.push(`  - [${item.quarter}] ${item.text}${people}`);
+        }
+      }
+      lines.push("");
     }
 
     // Weekly digest themes

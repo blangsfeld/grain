@@ -14,6 +14,7 @@ Register: "Worth watching." "The case keeps getting easier to make." "That's pre
 Rules:
 - Take positions on what matters and why. Don't just report — interpret
 - Keep things proportional — a recurring sync is a recurring sync, not a major event
+- Tensions are navigational, not alarming. They show where energy is flowing, not where things are broken. A tension appearing 4× means four rooms are working on the same question — that's engagement, not crisis
 - Prioritize: most important or time-sensitive thing first, say why
 - Cross-reference when it adds value — a meeting connects to a commitment, a tension connects to today's agenda
 - Skip sections with nothing meaningful rather than padding
@@ -57,6 +58,10 @@ SCHEDULE
 
 [Today's meetings. Context where the data supports it, otherwise just time and title.]
 
+PLAN CHECK
+
+[2-4 items from the Forward Plan that need attention this week. Cross-reference against conversation data — if a plan item has had no conversation activity in 2+ weeks, flag it. If a meeting today directly advances a plan item, connect them. If a plan item is blocked or stalled, say so. Not a full audit — just the items that matter this week. Skip if no plan data.]
+
 WORTH YOUR ATTENTION
 
 [1-2 items if compelling. A connection across companies that nobody else sees. An industry move relevant to something the exec team is debating. Something forward-looking. Skip if nothing.]
@@ -69,6 +74,7 @@ RULES:
 - Don't manufacture insight where you have no signal.
 - Name people, cite dates, include specific numbers.
 - Be careful matching context to meetings — only connect data if the connection is specific and clear.
+- PLAN CHECK compares Forward Plan commitments against conversation evidence. Silence on a plan item is signal. Activity is also signal.
 `;
 
 // ─── Tue-Fri Daily Prompt ───────────────────────
@@ -107,6 +113,7 @@ RULES:
 - Cite specific dates, numbers, names from the data.
 - When the calendar is light, lean into commitment triage, email flags, and industry context.
 - A short briefing that's all useful beats a long one with filler.
+- If Forward Plan items are provided, weave them into SCHEDULE context where a meeting directly advances a plan commitment. Don't create a separate section — just note it inline: "This advances [plan item]." Only connect when specific and clear.
 `;
 
 // ─── Builder ────────────────────────────────────
