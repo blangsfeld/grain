@@ -57,6 +57,7 @@ export interface BriefingContext {
   emailThreads: GmailThread[];
   buildIntel: string | null;
   industryEdge: string | null;
+  previousBriefing?: string;          // Yesterday's briefing for continuity
 
   // Monday-only
   weekInReview?: Record<string, DxAtom[]>;   // Atoms by domain, past 7 days
@@ -114,6 +115,24 @@ export async function assembleBriefingContext(mode?: BriefingMode): Promise<Brie
     buildIntel,
     industryEdge,
   };
+
+  // Previous briefing for continuity
+  try {
+    const db = getSupabaseAdmin();
+    const { data: prevBriefing } = await db
+      .from("dx_briefings")
+      .select("content, type")
+      .in("type", ["daily", "monday_exec"])
+      .lt("time_range_start", `${today}T00:00:00.000Z`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (prevBriefing?.content) {
+      context.previousBriefing = prevBriefing.content;
+    }
+  } catch {
+    // Non-fatal — first briefing or DB issue
+  }
 
   // Monday-only: additional context
   if (isMonday) {
@@ -661,6 +680,13 @@ export function formatBriefingContext(ctx: BriefingContext): string {
       if (tensionMatch) lines.push(tensionMatch[1].trim());
       lines.push("");
     }
+  }
+
+  // Previous briefing for continuity
+  if (ctx.previousBriefing) {
+    lines.push("## PREVIOUS BRIEFING (yesterday)");
+    lines.push(ctx.previousBriefing);
+    lines.push("");
   }
 
   return lines.join("\n");

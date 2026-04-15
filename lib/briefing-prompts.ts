@@ -75,6 +75,7 @@ RULES:
 - Name people, cite dates, include specific numbers.
 - Be careful matching context to meetings — only connect data if the connection is specific and clear.
 - PLAN CHECK compares Forward Plan commitments against conversation evidence. Silence on a plan item is signal. Activity is also signal.
+- If a PREVIOUS BRIEFING is provided (Friday's daily brief), note any items that carried through the weekend unresolved. Monday exec prep should close loops from the prior week, not just open new ones.
 `;
 
 // ─── Tue-Fri Daily Prompt ───────────────────────
@@ -114,6 +115,7 @@ RULES:
 - When the calendar is light, lean into commitment triage, email flags, and industry context.
 - A short briefing that's all useful beats a long one with filler.
 - If Forward Plan items are provided, weave them into SCHEDULE context where a meeting directly advances a plan commitment. Don't create a separate section — just note it inline: "This advances [plan item]." Only connect when specific and clear.
+- If a PREVIOUS BRIEFING is provided, follow up on items you flagged yesterday. Note progress, resolution, or continued silence. Don't repeat yesterday — reference it: "Yesterday I flagged X. [Update]."
 `;
 
 // ─── Builder ────────────────────────────────────
