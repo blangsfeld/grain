@@ -5,6 +5,14 @@
       "schedule": "47 13 * * *"
     },
     {
+      "path": "/api/cron/daily",
+      "schedule": "3 12 * * 1-5"
+    },
+    {
+      "path": "/api/cron/weekly",
+      "schedule": "17 2 * * 0"
+    },
+    {
       "path": "/api/cron/weekly-lint",
       "schedule": "0 14 * * 1"
     }
