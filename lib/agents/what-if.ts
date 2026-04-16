@@ -508,6 +508,74 @@ export async function runWhatIf(): Promise<BruhReport> {
   };
 }
 
+// ── Ad-hoc query mode ──────────────────────────────
+// Keys dispatches "ask Bruh X" here. Same corpus + resource palette as
+// the weekly run, but tailored to a specific question. Returns plain
+// markdown (one or two focused pitches) instead of three structured JSON
+// pitches. Does not write to agent_outputs.
+
+const QUERY_PERSONA_PROMPT = `You are Bruh — the pitch guy for Ben Langsfeld's agent ecosystem. Ben is asking you for a specific pitch or what-if right now. You have the full corpus snapshot and the list of existing resources.
+
+## How you answer
+- Lead with ONE concrete pitch tailored to the question. If the question clearly calls for more than one option, give two. Never more.
+- Cite specific atoms from the corpus — tensions, decisions, commitments, voice moments — that ground the pitch.
+- Use only existing resources (apps, services, network, wiki techniques). Don't invent a new app or hire.
+- If the question is broad, ask Ben one sharp clarifying question at the top, then give your best guess-pitch below it.
+
+## Voice
+Casual-but-sharp. Pitch-guy energy. Stacked declaratives. Cross-domain metaphors OK. Compressed — if it takes three paragraphs, cut it.
+
+Banned: leverage, ecosystem, synergy, unlock, transform, innovate, seamless, robust, best-in-class, streamline, actionable.
+
+## Structure of each pitch (prose, not JSON)
+- **Title** — short, observational, not a product name
+- **What I saw** — the corpus signal that motivated this pitch
+- **What if** — the speculative move, concrete
+- **Why now** — timing anchor (recent decision, active tension, upcoming event)
+- **Uses** — apps, services, people it would involve (real ones only)
+
+## Output
+Plain markdown — NOT JSON. Ben reads this directly in Telegram.`;
+
+export interface BruhQueryResult {
+  answer: string;
+  question: string;
+  corpus_summary: { tensions: number; decisions: number; commitments: number; beliefs: number; voice: number };
+}
+
+export async function runBruhQuery(question: string): Promise<BruhQueryResult> {
+  const ctx = await gatherCorpus(30);
+
+  const contextParts: string[] = [];
+  contextParts.push(buildUserMessage(ctx));
+
+  const anthropic = getAnthropicClient(60_000);
+  const response = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1500,
+    system: QUERY_PERSONA_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: `${contextParts.join("\n")}\n\n---\n\nBen's question: "${question}"\n\nPitch directly. Cite atoms. Use existing resources only.`,
+      },
+    ],
+  });
+
+  const answer = response.content[0]?.type === "text" ? response.content[0].text : "";
+  return {
+    answer: answer || "No pitch this time. Corpus might be thin or the question needs sharpening.",
+    question,
+    corpus_summary: {
+      tensions: ctx.active_tensions.length,
+      decisions: ctx.recent_decisions.length,
+      commitments: ctx.open_commitments.length,
+      beliefs: ctx.recent_beliefs.length,
+      voice: ctx.voice_moments.length,
+    },
+  };
+}
+
 export async function runAndWriteWhatIf(): Promise<{ output_id: string; report: BruhReport }> {
   const report = await runWhatIf();
   const markdown = renderMarkdown(report);

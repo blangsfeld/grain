@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/columnist",
       "schedule": "47 14 * * 3"
+    },
+    {
+      "path": "/api/cron/notion-steward",
+      "schedule": "27 14 * * 1"
     }
   ]
 }

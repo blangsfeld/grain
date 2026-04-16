@@ -260,3 +260,138 @@ export async function runAndWriteEa(): Promise<{ output_id: string; report: Budd
 
   return { output_id: id, report: reportData };
 }
+
+// ── Ad-hoc query mode ──────────────────────────────
+// Keys dispatches "ask Buddy X" / "tell Buddy Y" here. Loads the full
+// commitment set (with classifier labels) and reasons against it.
+// Unlike the daily triage, this doesn't filter skipped items — Ben might
+// be searching for something Buddy labeled as scaffolding.
+
+const QUERY_MODEL = "claude-sonnet-4-5-20250929";
+
+const QUERY_PERSONA_PROMPT = `You are Buddy, Ben Langsfeld's executive assistant. Ben is asking you a specific question about his commitments — things he or his team agreed to do in meetings.
+
+You have the full commitment record, including items Buddy's classifier marked as "skip" (scaffolding like "block calendar time"). Include them if they're relevant to the question — Ben might specifically want logistics, not just real work.
+
+## How you answer
+- Direct. Lead with the finding.
+- Cite specific commitments with person, statement, and meeting context.
+- Quote the statement verbatim when asked about specifics.
+- If the question asks about a person, meeting, or topic that has no matching commitments, say so plainly. Don't pad with adjacent items.
+- If the question is about what's overdue or urgent, surface deadlines and age; don't just list everything.
+
+## Voice
+Short. Under 200 words usually. Like a chief of staff who already scanned the data. No corporate hedging.
+
+Banned: leverage, ecosystem, seamless, robust, actionable, circle back, streamline.
+
+## Output
+Plain markdown — NOT JSON. Ben reads this directly in Telegram.`;
+
+interface CommitmentDossier {
+  statement: string;
+  person: string | null;
+  category: string | null;
+  meeting_title: string | null;
+  meeting_date: string | null;
+  due_date: string | null;
+  status: string | null;
+  classifier_weight: string | null;
+  classifier_reason: string | null;
+  age_days: number | null;
+  overdue_days: number | null;
+}
+
+async function gatherAllCommitments(): Promise<CommitmentDossier[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("dx_commitments")
+    .select(`
+      id, statement, person, category, meeting_title, meeting_date, due_date, status,
+      commitment_labels(weight, reason)
+    `)
+    .order("meeting_date", { ascending: false })
+    .limit(200);
+
+  if (error) throw new Error(`commitment query failed: ${error.message}`);
+
+  const today = new Date();
+  type Row = {
+    statement: string;
+    person: string | null;
+    category: string | null;
+    meeting_title: string | null;
+    meeting_date: string | null;
+    due_date: string | null;
+    status: string | null;
+    commitment_labels: Array<{ weight: string; reason: string | null }> | { weight: string; reason: string | null } | null;
+  };
+
+  return (data as unknown as Row[]).map((r) => {
+    const label = Array.isArray(r.commitment_labels) ? r.commitment_labels[0] : r.commitment_labels;
+    const meetDate = r.meeting_date ? new Date(r.meeting_date) : null;
+    const dueDate = r.due_date ? new Date(r.due_date) : null;
+    return {
+      statement: r.statement,
+      person: r.person,
+      category: r.category,
+      meeting_title: r.meeting_title,
+      meeting_date: r.meeting_date,
+      due_date: r.due_date,
+      status: r.status,
+      classifier_weight: label?.weight ?? null,
+      classifier_reason: label?.reason ?? null,
+      age_days: meetDate ? Math.floor((today.getTime() - meetDate.getTime()) / 86_400_000) : null,
+      overdue_days: dueDate ? Math.floor((today.getTime() - dueDate.getTime()) / 86_400_000) : null,
+    };
+  });
+}
+
+export interface BuddyQueryResult {
+  answer: string;
+  commitment_count: number;
+  question: string;
+}
+
+export async function runBuddyQuery(question: string): Promise<BuddyQueryResult> {
+  const commitments = await gatherAllCommitments();
+
+  const lines: string[] = [];
+  lines.push(`# Commitment record (${commitments.length} total — open + closed, all weights)`);
+  lines.push("");
+  for (const c of commitments) {
+    const parts: string[] = [];
+    parts.push(`"${c.statement}"`);
+    const meta: string[] = [];
+    if (c.person) meta.push(`person: ${c.person}`);
+    if (c.status) meta.push(`status: ${c.status}`);
+    if (c.classifier_weight) meta.push(`weight: ${c.classifier_weight}`);
+    if (c.category) meta.push(c.category);
+    if (c.meeting_title) meta.push(`meeting: ${c.meeting_title}`);
+    if (c.meeting_date) meta.push(c.meeting_date);
+    if (c.age_days !== null) meta.push(`age: ${c.age_days}d`);
+    if (c.overdue_days !== null) meta.push(`overdue: ${c.overdue_days}d`);
+    if (c.due_date) meta.push(`due: ${c.due_date}`);
+    lines.push(`- ${parts.join(" ")} [${meta.join(" · ")}]`);
+  }
+
+  const anthropic = getAnthropicClient(60_000);
+  const response = await anthropic.messages.create({
+    model: QUERY_MODEL,
+    max_tokens: 1200,
+    system: QUERY_PERSONA_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: `${lines.join("\n")}\n\n---\n\nBen's question: "${question}"\n\nAnswer directly. Cite specific commitments. Use verbatim statements when quoting.`,
+      },
+    ],
+  });
+
+  const answer = response.content[0]?.type === "text" ? response.content[0].text : "";
+  return {
+    answer: answer || "Reasoning step returned empty. Try rephrasing.",
+    commitment_count: commitments.length,
+    question,
+  };
+}

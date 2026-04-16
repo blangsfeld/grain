@@ -13,6 +13,9 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getAnthropicClient } from "@/lib/anthropic";
 import { readLatestAgentOutput } from "@/lib/agents/agent-output";
+import { runTimiQuery } from "@/lib/agents/notion-steward";
+import { runBuddyQuery } from "@/lib/agents/ea";
+import { runBruhQuery } from "@/lib/agents/what-if";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
@@ -44,19 +47,23 @@ export type Destination =
   | "loops"
   | "skip";
 
+export type TargetAgent = "timi" | "buddy" | "guy" | "dood" | "bruh" | "clark" | "milli" | null;
+
 interface Classification {
   kind: CaptureKind;
   destination: Destination | null;
+  target_agent: TargetAgent;
+  question: string | null;
   reason: string;
   reply: string;
 }
 
-const SYSTEM_PROMPT = `You are Keys, the Telegram front door for Ben Langsfeld's agent ecosystem. You receive whatever Ben drops in (thoughts, links, voice notes, requests) and do three things:
+const SYSTEM_PROMPT = `You are Keys, the Telegram front door for Ben Langsfeld's agent ecosystem. You receive whatever Ben drops in (thoughts, links, voice notes, requests) and do these things:
 
 1. Classify the message kind:
    - "capture" — a thought, link, or idea Ben wants saved
    - "query" — a question about his system (status, who, what)
-   - "command" — a directive (e.g. "run Milli", "show me Buddy's latest")
+   - "command" — a directive to an agent or to the system (e.g. "ask Timi X", "run Milli")
    - "unknown" — unclear, ask for clarification
 
 2. For captures, propose a destination:
@@ -68,17 +75,29 @@ const SYSTEM_PROMPT = `You are Keys, the Telegram front door for Ben Langsfeld's
    - "loops" — an open thread/question he needs to return to
    - "skip" — probably shouldn't be saved (ephemeral chatter)
 
-3. Write a short reply (1-3 sentences) confirming what you did. Casual, warm, direct. Match Ben's voice: compressed, no hedging, position-taking. No corporate tone. Banned words: leverage, ecosystem, seamless, robust, unlock.
+3. For commands, identify the target agent and extract the clean question:
+   - target_agent: one of "timi" (Notion people), "buddy" (commitments/EA), "guy" (pipeline health), "dood" (security), "bruh" (pitches/what-ifs), "clark" (voice/essays), "milli" (wiki), or null if no specific agent targeted
+   - question: the actual task/question stripped of dispatch words ("ask Timi who..." → question: "Who...")
+
+4. Write a short reply. Rules:
+   - For captures/queries: confirm what you did in 1-3 sentences, casual and warm.
+   - For commands WITH a target_agent: do NOT promise the agent will respond — set reply to "dispatching to {agent}..." (a real answer will replace this). Never fake a confirmation.
+   - For commands WITHOUT a target_agent: log it honestly as pending.
+
+Match Ben's voice: compressed, no hedging, position-taking. No corporate tone.
+Banned words: leverage, ecosystem, seamless, robust, unlock, dig into.
 
 Return strict JSON only:
 {
   "kind": "capture|query|command|unknown",
   "destination": "wiki-inbox|ideas|decisions|commitments|reference|loops|skip",
+  "target_agent": "timi|buddy|guy|dood|bruh|clark|milli|null",
+  "question": "clean question or null",
   "reason": "one short sentence",
   "reply": "what you send back to Ben"
 }
 
-For query/command/unknown, set destination to null.`;
+For non-commands, set target_agent and question to null. For non-captures, set destination to null.`;
 
 function buildUserPrompt(text: string): string {
   return `Message from Ben:
@@ -90,6 +109,8 @@ ${text}
 Classify and respond. JSON only.`;
 }
 
+const VALID_AGENTS: TargetAgent[] = ["timi", "buddy", "guy", "dood", "bruh", "clark", "milli"];
+
 function parseClassification(raw: string): Classification | null {
   const cleaned = raw.replace(/```(?:json)?\s*|\s*```/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
@@ -98,9 +119,17 @@ function parseClassification(raw: string): Classification | null {
     const parsed = JSON.parse(match[0]);
     if (!["capture", "query", "command", "unknown"].includes(parsed.kind)) return null;
     if (typeof parsed.reply !== "string") return null;
+    const target = typeof parsed.target_agent === "string" && VALID_AGENTS.includes(parsed.target_agent as TargetAgent)
+      ? (parsed.target_agent as TargetAgent)
+      : null;
+    const question = typeof parsed.question === "string" && parsed.question.trim().length > 0
+      ? parsed.question.trim()
+      : null;
     return {
       kind: parsed.kind as CaptureKind,
       destination: parsed.destination ?? null,
+      target_agent: target,
+      question,
       reason: parsed.reason ?? "",
       reply: parsed.reply,
     };
@@ -125,6 +154,8 @@ export async function classifyMessage(text: string): Promise<Classification> {
       return {
         kind: "unknown",
         destination: null,
+        target_agent: null,
+        question: null,
         reason: "classifier parse failure",
         reply: "Got it, but couldn't classify. Filed as unknown — check back at /boot.",
       };
@@ -135,6 +166,8 @@ export async function classifyMessage(text: string): Promise<Classification> {
     return {
       kind: "unknown",
       destination: null,
+      target_agent: null,
+      question: null,
       reason: `classifier error: ${msg}`,
       reply: "Classifier offline — stored as unknown. I'll retry later.",
     };
@@ -201,12 +234,13 @@ export async function sendTelegramReply(
 // ── Query answering (reads all siblings) ───────────
 
 async function gatherSiblingContext(): Promise<string> {
-  const [guy, buddy, dood, bruh, milli] = await Promise.all([
+  const [guy, buddy, dood, bruh, milli, timi] = await Promise.all([
     readLatestAgentOutput("grain-steward"),
     readLatestAgentOutput("ea"),
     readLatestAgentOutput("security-steward"),
     readLatestAgentOutput("what-if"),
     readLatestAgentOutput("wiki-librarian"),
+    readLatestAgentOutput("notion-steward"),
   ]);
 
   const lines: string[] = [];
@@ -215,12 +249,14 @@ async function gatherSiblingContext(): Promise<string> {
   if (dood) lines.push(`**Dood (security)** [${dood.severity}]: ${dood.markdown.slice(0, 300)}`);
   if (bruh) lines.push(`**Bruh (pitches)** [${bruh.severity}]: ${bruh.markdown.slice(0, 300)}`);
   if (milli) lines.push(`**Milli (wiki)** [${milli.severity}]: ${milli.markdown.slice(0, 200)}`);
+  if (timi) lines.push(`**Timi (Notion)** [${timi.severity}]: ${timi.markdown.slice(0, 400)}`);
   return lines.join("\n\n");
 }
 
 const QUERY_SYSTEM = `You are Keys, Ben Langsfeld's Telegram front door. Ben just asked a question. You have:
-1. The latest reports from his agents (Guy, Buddy, Dood, Bruh, Clark, Milli)
+1. The latest reports from his agents (Guy, Buddy, Dood, Bruh, Clark, Milli, Timi)
 2. Direct data from his Grain database (voice atoms, quotes, commitments, recent transcripts)
+3. Timi's Notion report covers People Intelligence and LinkedIn Prospects — refer to it for anything about stakeholders, enrichment status, or prospect pipeline
 
 Answer using whichever source has the answer. Be concise (2-6 sentences). Casual, warm, direct. Quote exact voice atoms or quotes when relevant — don't paraphrase, give him the real words.
 
@@ -373,6 +409,27 @@ async function gatherQueryData(question: string): Promise<string> {
     }
   }
 
+  // Notion / People Intelligence / Prospects — route to Timi's latest report
+  if (
+    q.includes("notion") ||
+    q.includes("people intel") ||
+    q.includes("prospect") ||
+    q.includes("linkedin") ||
+    q.includes("enrichment") ||
+    q.includes("stale people") ||
+    q.includes("who should i enrich") ||
+    q.includes("who to reach out") ||
+    q.includes("promotion candidate") ||
+    q.includes("timi")
+  ) {
+    const timi = await readLatestAgentOutput("notion-steward");
+    if (timi) {
+      lines.push(`## Timi's latest Notion report [${timi.severity}, ${timi.run_at}]`);
+      lines.push(timi.markdown.slice(0, 2500));
+      lines.push("");
+    }
+  }
+
   // Decisions
   if (q.includes("decision") || q.includes("decided") || q.includes("agreed")) {
     const { data } = await supabase
@@ -426,6 +483,55 @@ async function answerQuery(question: string): Promise<string> {
   }
 }
 
+// ── Command dispatch ───────────────────────────────
+// When Ben sends "ask Timi X" / "tell Bruh Y", classifier sets target_agent
+// and question. This function actually runs the agent and returns its
+// answer. Only Timi has a query entrypoint in v1 — other agents return
+// honest "not wired yet" responses instead of faking confirmation.
+
+async function dispatchAgentCommand(
+  target: TargetAgent,
+  question: string,
+): Promise<string> {
+  switch (target) {
+    case "timi": {
+      try {
+        const { answer, people_count } = await runTimiQuery(question);
+        return `${answer}\n\n_Timi · ${people_count} people_`;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return `Timi errored: ${msg}`;
+      }
+    }
+    case "buddy": {
+      try {
+        const { answer, commitment_count } = await runBuddyQuery(question);
+        return `${answer}\n\n_Buddy · ${commitment_count} commitments scanned_`;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return `Buddy errored: ${msg}`;
+      }
+    }
+    case "bruh": {
+      try {
+        const { answer, corpus_summary } = await runBruhQuery(question);
+        const c = corpus_summary;
+        return `${answer}\n\n_Bruh · corpus: ${c.tensions} tensions, ${c.decisions} decisions, ${c.commitments} commitments_`;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return `Bruh errored: ${msg}`;
+      }
+    }
+    case "guy":
+    case "dood":
+    case "clark":
+    case "milli":
+      return `${target[0].toUpperCase() + target.slice(1)} doesn't have an on-demand query mode yet — only Timi, Buddy, and Bruh do. Logged this for the next cron run.`;
+    default:
+      return "No target agent identified. Logged as a generic command.";
+  }
+}
+
 // ── Authorization ──────────────────────────────────
 // Only Ben's user ID should be allowed. Set TELEGRAM_ALLOWED_USER_ID env var.
 export function isAuthorizedUser(update: TelegramUpdate): boolean {
@@ -458,17 +564,23 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<{
   // Classify
   const classification = await classifyMessage(text);
 
-  // For queries, enrich the reply with sibling context
-  if (classification.kind === "query") {
-    const answer = await answerQuery(text);
-    classification.reply = answer;
+  // If a target agent was identified (from a command OR a query worded like
+  // "Buddy, show me..."), dispatch directly — fresher than summarizing the
+  // agent's last cron output.
+  if (classification.target_agent) {
+    const question = classification.question || text;
+    classification.reply = await dispatchAgentCommand(classification.target_agent, question);
+  } else if (classification.kind === "query") {
+    // Generic query with no named agent — use sibling-context synthesis
+    classification.reply = await answerQuery(text);
   }
 
   // Store
   const { id } = await storeCapture(update, classification);
 
-  // Reply
-  const replyBody = classification.kind === "query"
+  // Reply — dispatched and synthesized answers return the full body;
+  // non-routed captures/commands get the classification tag appended
+  const replyBody = (classification.target_agent || classification.kind === "query")
     ? classification.reply
     : [
         classification.reply,

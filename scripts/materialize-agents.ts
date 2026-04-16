@@ -39,6 +39,7 @@ const AGENT_IDS = [
   "what-if",         // Bruh
   "columnist",       // Clark
   "wiki-librarian",  // Milli
+  "notion-steward",  // Timi
 ];
 
 async function materializeAgentOutputs() {
