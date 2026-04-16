@@ -218,23 +218,144 @@ async function gatherSiblingContext(): Promise<string> {
   return lines.join("\n\n");
 }
 
-const QUERY_SYSTEM = `You are Keys, Ben Langsfeld's Telegram front door. Ben just asked a question. You have access to the latest reports from his five agents. Answer his question using their findings. Be concise (2-5 sentences). Casual, warm, direct. If the answer isn't in the agent reports, say so and suggest he check at /boot.
+const QUERY_SYSTEM = `You are Keys, Ben Langsfeld's Telegram front door. Ben just asked a question. You have:
+1. The latest reports from his agents (Guy, Buddy, Dood, Bruh, Clark, Milli)
+2. Direct data from his Grain database (voice atoms, quotes, commitments, recent transcripts)
+
+Answer using whichever source has the answer. Be concise (2-6 sentences). Casual, warm, direct. Quote exact voice atoms or quotes when relevant — don't paraphrase, give him the real words.
 
 Banned: leverage, ecosystem, seamless, robust.`;
 
+// ── Direct DB queries for specific lookups ──────────
+
+async function gatherQueryData(question: string): Promise<string> {
+  const supabase = getSupabaseAdmin();
+  const q = question.toLowerCase();
+  const lines: string[] = [];
+
+  // Voice atoms
+  if (q.includes("voice") || q.includes("quote") || q.includes("moment") || q.includes("compression") || q.includes("reframe") || q.includes("leaderboard")) {
+    const limit = q.match(/(\d+)\s*(voice|quote|moment)/)?.[1];
+    const n = limit ? Math.min(parseInt(limit), 20) : 5;
+
+    const { data } = await supabase
+      .from("dx_atoms")
+      .select("content, source_title, source_date")
+      .eq("type", "voice")
+      .order("created_at", { ascending: false })
+      .limit(n);
+
+    if (data?.length) {
+      lines.push(`## Last ${data.length} voice atoms:`);
+      for (const r of data) {
+        const c = r.content as Record<string, string>;
+        lines.push(`- "${c.quote}" — ${c.why_it_works ?? ""}`);
+        lines.push(`  From: ${r.source_title} (${r.source_date})`);
+      }
+      lines.push("");
+    }
+  }
+
+  // Commitments
+  if (q.includes("commitment") || q.includes("open loop") || q.includes("what did i") || q.includes("owe") || q.includes("promised")) {
+    const { data } = await supabase
+      .from("dx_commitments")
+      .select("statement, person, category, meeting_date, status")
+      .eq("status", "open")
+      .order("meeting_date", { ascending: false })
+      .limit(10);
+
+    if (data?.length) {
+      lines.push(`## Open commitments (${data.length}):`);
+      for (const r of data) {
+        lines.push(`- ${r.person}: "${r.statement}" (${r.category}, ${r.meeting_date})`);
+      }
+      lines.push("");
+    }
+  }
+
+  // Recent meetings/transcripts
+  if (q.includes("meeting") || q.includes("transcript") || q.includes("last call") || q.includes("talked about")) {
+    const { data } = await supabase
+      .from("dx_transcripts")
+      .select("source_title, source_date, participants")
+      .order("source_date", { ascending: false })
+      .limit(5);
+
+    if (data?.length) {
+      lines.push("## Recent meetings:");
+      for (const r of data) {
+        const participants = r.participants as Array<{ name: string }> | null;
+        const names = participants?.map((p) => p.name).join(", ") ?? "?";
+        lines.push(`- ${r.source_title} (${r.source_date}) — ${names}`);
+      }
+      lines.push("");
+    }
+  }
+
+  // Tensions
+  if (q.includes("tension") || q.includes("conflict") || q.includes("friction")) {
+    const { data } = await supabase
+      .from("dx_atoms")
+      .select("content, source_date")
+      .eq("type", "tension")
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    if (data?.length) {
+      lines.push("## Recent tensions:");
+      for (const r of data) {
+        const c = r.content as Record<string, string>;
+        lines.push(`- ${c.pair || c.title || c.name || "?"} (${r.source_date})`);
+      }
+      lines.push("");
+    }
+  }
+
+  // Decisions
+  if (q.includes("decision") || q.includes("decided") || q.includes("agreed")) {
+    const { data } = await supabase
+      .from("dx_atoms")
+      .select("content, source_title, source_date")
+      .eq("type", "decision")
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    if (data?.length) {
+      lines.push("## Recent decisions:");
+      for (const r of data) {
+        const c = r.content as Record<string, string>;
+        lines.push(`- ${c.statement || c.decision || c.title || "?"} — ${r.source_title} (${r.source_date})`);
+      }
+      lines.push("");
+    }
+  }
+
+  return lines.join("\n");
+}
+
 async function answerQuery(question: string): Promise<string> {
-  const context = await gatherSiblingContext();
-  if (!context) return "None of the agents have reported yet. Boot a session and run them first.";
+  const [siblingContext, dbContext] = await Promise.all([
+    gatherSiblingContext(),
+    gatherQueryData(question),
+  ]);
+
+  if (!siblingContext && !dbContext) return "None of the agents have reported yet and I couldn't find matching data. Boot a session and run them first.";
 
   try {
     const anthropic = getAnthropicClient(20_000);
+    const context = [
+      dbContext ? `# Direct from database\n\n${dbContext}` : "",
+      siblingContext ? `# Agent reports\n\n${siblingContext}` : "",
+    ].filter(Boolean).join("\n\n---\n\n");
+
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 300,
+      max_tokens: 500,
       system: QUERY_SYSTEM,
       messages: [{
         role: "user",
-        content: `Agent reports:\n\n${context}\n\n---\n\nBen's question: "${question}"\n\nAnswer concisely.`,
+        content: `${context}\n\n---\n\nBen's question: "${question}"\n\nAnswer concisely. Quote exact data when available.`,
       }],
     });
     const text = response.content[0]?.type === "text" ? response.content[0].text : "";
