@@ -19,6 +19,7 @@ import { getAnthropicClient } from "@/lib/anthropic";
 import {
   writeAgentOutput,
   readLatestAgentOutput,
+  readOwnHistory,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
 
@@ -243,7 +244,10 @@ _Stats: X total voice moments captured. Top technique: compression. Y new this w
 
 (repeat for 3 pitches)
 
-IMPORTANT: Each leaderboard entry MUST include the atom UUID in square brackets [uuid] so I can track movement week over week. Use the IDs from the corpus I gave you. Keep total output under 1500 words.`;
+IMPORTANT: Each leaderboard entry MUST include the atom UUID in square brackets [uuid] so I can track movement week over week. Use the IDs from the corpus I gave you. Keep total output under 1500 words.
+
+## History awareness — EVOLVE, DON'T REPEAT
+You receive your previous outputs. Don't pitch the same essays again. If a voice atom held #1 for 3 weeks, note its streak but find a new pitch angle. If essay pitches from previous runs haven't been acted on, try completely different themes. The leaderboard CAN have repeat entries (good quotes stay good), but the pitches should always be fresh.`;
 
 // ── Context building ───────────────────────────────
 
@@ -329,14 +333,25 @@ export interface ClarkReport {
 
 export async function runAndWriteColumnist(): Promise<{ output_id: string; report: ClarkReport }> {
   const run_at = new Date().toISOString();
-  const [facts, siblings] = await Promise.all([gatherFacts(), readSiblings()]);
+  const [facts, siblings, history] = await Promise.all([gatherFacts(), readSiblings(), readOwnHistory(AGENT_ID, 4)]);
+
+  // Build history context
+  let historyBlock = "";
+  if (history.length > 0) {
+    const lines = ["\n# Your previous outputs (DON'T REPEAT ESSAY PITCHES)", ""];
+    for (const h of history) {
+      lines.push(`Run: ${h.run_at} — ${h.markdown_preview.slice(0, 400)}`);
+      lines.push("");
+    }
+    historyBlock = lines.join("\n");
+  }
 
   const anthropic = getAnthropicClient(90_000);
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 3000,
     system: PERSONA_PROMPT,
-    messages: [{ role: "user", content: buildContext(facts, siblings) }],
+    messages: [{ role: "user", content: buildContext(facts, siblings) + historyBlock }],
   });
 
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";

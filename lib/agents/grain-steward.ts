@@ -18,6 +18,7 @@ import { getAnthropicClient } from "@/lib/anthropic";
 import {
   writeAgentOutput,
   readLatestAgentOutput,
+  readOwnHistory,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
 
@@ -172,6 +173,9 @@ A short markdown report (under 300 words). Structure:
 3. Any individual findings worth flagging
 4. "All clear" closing if nothing's wrong — don't manufacture concern
 
+## History awareness
+You receive your last run's output. If the data hasn't materially changed (same briefing age, same commitment count, same extraction state), say "No change since last check" with a one-liner, don't re-narrate the whole picture. Only write a full report when something shifted. Cross-signals stay interesting even on repeat if the underlying pattern is evolving.
+
 ## Voice
 Matter-of-fact. Compressed. "Here's what I saw, here's what it means." No alarmism on green days. No corporate hedging. You're the guy who says "the building's fine" when it's fine and "the boiler's off" when it's off.
 
@@ -190,7 +194,7 @@ Return strict JSON:
 
 // ── Reasoning step ─────────────────────────────────
 
-function buildContext(facts: PipelineFacts, siblings: SiblingContext): string {
+function buildContext(facts: PipelineFacts, siblings: SiblingContext, ownHistory: Array<{ markdown_preview: string }> = []): string {
   const lines: string[] = [];
   lines.push("# Pipeline Facts (last check)");
   lines.push("");
@@ -238,6 +242,12 @@ function buildContext(facts: PipelineFacts, siblings: SiblingContext): string {
     lines.push("");
   }
 
+  if (ownHistory.length > 0) {
+    lines.push("# Your last report (for comparison — don't repeat if nothing changed)");
+    lines.push(ownHistory[0].markdown_preview);
+    lines.push("");
+  }
+
   lines.push("---");
   lines.push("Now write your report. Return JSON with severity and markdown.");
   return lines.join("\n");
@@ -269,14 +279,14 @@ export interface GuyReport {
 
 export async function runGrainSteward(): Promise<GuyReport> {
   const run_at = new Date().toISOString();
-  const [facts, siblings] = await Promise.all([gatherFacts(), readSiblings()]);
+  const [facts, siblings, ownHistory] = await Promise.all([gatherFacts(), readSiblings(), readOwnHistory(AGENT_ID, 2)]);
 
   const anthropic = getAnthropicClient(30_000);
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 800,
     system: PERSONA_PROMPT,
-    messages: [{ role: "user", content: buildContext(facts, siblings) }],
+    messages: [{ role: "user", content: buildContext(facts, siblings, ownHistory) }],
   });
 
   const content = response.content[0];

@@ -10,6 +10,7 @@ import { getAnthropicClient } from "@/lib/anthropic";
 import {
   writeAgentOutput,
   readLatestAgentOutput,
+  readOwnHistory,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
 
@@ -149,6 +150,9 @@ Casual but clear. "Yo, 36 tables in JPMP have wide-open RLS" not "Multiple table
 
 Banned: leverage, ecosystem, robust, proactive, remediate (use "fix"), holistic.
 
+## History awareness
+You receive your last report. If findings are identical to yesterday (same count, same tables, same patterns), say "Same findings as yesterday — N warnings, no change. Fix the patterns from the last report." Don't re-list 36 JPMP tables daily. Only write a full report when findings change, new ones appear, or old ones get fixed.
+
 ## Severity
 - green: no WARN or ERROR findings
 - attention: WARN findings exist
@@ -223,6 +227,8 @@ function buildContext(facts: DoodFacts, siblings: { guy: string | null; buddy: s
   return lines.join("\n");
 }
 
+// History added in the entrypoint below, not in buildContext (which must stay sync for parallel exec)
+
 function parseResponse(raw: string): { severity: AgentSeverity; markdown: string } | null {
   const cleaned = raw.replace(/```(?:json)?\s*|\s*```/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
@@ -249,14 +255,19 @@ export interface DoodReport {
 
 export async function runAndWriteSecuritySteward(): Promise<{ output_id: string; report: DoodReport }> {
   const run_at = new Date().toISOString();
-  const [facts, siblings] = await Promise.all([gatherFacts(), readSiblings()]);
+  const [facts, siblings, ownHistory] = await Promise.all([gatherFacts(), readSiblings(), readOwnHistory(AGENT_ID, 2)]);
 
   const anthropic = getAnthropicClient(30_000);
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 800,
     system: PERSONA_PROMPT,
-    messages: [{ role: "user", content: buildContext(facts, siblings) }],
+    messages: [{
+      role: "user",
+      content: buildContext(facts, siblings) + (ownHistory.length > 0
+        ? `\n\n# Your last report (don't re-list same findings)\n${ownHistory[0].markdown_preview}\n`
+        : ""),
+    }],
   });
 
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";

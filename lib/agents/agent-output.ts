@@ -35,7 +35,7 @@ export async function writeAgentOutput(out: AgentOutput): Promise<{ id: string }
 }
 
 /**
- * Latest output for an agent. Used by /boot materialization.
+ * Latest output for an agent. Used by /boot materialization and sibling reads.
  */
 export async function readLatestAgentOutput(agent_id: string): Promise<{
   run_at: string;
@@ -60,4 +60,33 @@ export async function readLatestAgentOutput(agent_id: string): Promise<{
     markdown: data.markdown as string,
     findings: (data.findings ?? {}) as Record<string, unknown>,
   };
+}
+
+/**
+ * Own history — last N outputs for this agent. Used to avoid repetition.
+ * Returns markdown summaries (truncated) for prompt context.
+ */
+export async function readOwnHistory(agent_id: string, limit = 4): Promise<Array<{
+  run_at: string;
+  severity: AgentSeverity;
+  markdown_preview: string;
+  findings: Record<string, unknown>;
+}>> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("agent_outputs")
+    .select("run_at, severity, markdown, findings")
+    .eq("agent_id", agent_id)
+    .order("run_at", { ascending: false })
+    .limit(limit + 1); // +1 because the most recent might be the current run's predecessor
+
+  if (error) throw new Error(`agent_outputs history read failed: ${error.message}`);
+  if (!data || data.length === 0) return [];
+
+  return data.slice(0, limit).map((row) => ({
+    run_at: row.run_at as string,
+    severity: row.severity as AgentSeverity,
+    markdown_preview: (row.markdown as string).slice(0, 500),
+    findings: (row.findings ?? {}) as Record<string, unknown>,
+  }));
 }

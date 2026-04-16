@@ -18,6 +18,7 @@ import { getAnthropicClient } from "@/lib/anthropic";
 import {
   writeAgentOutput,
   readLatestAgentOutput,
+  readOwnHistory,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
 
@@ -249,6 +250,9 @@ Aim for at least one of each category in every run. The third can be whichever h
   ]
 }
 
+## History awareness — DON'T REPEAT YOURSELF
+You receive your own last 4 outputs. Read the pitch titles and observations from previous runs. Do NOT re-pitch the same idea. If a theme keeps surfacing (e.g., "nothing compounds" appeared in 3 runs), that's a signal to go DEEPER on it with a new angle, not to say it again the same way. If nothing in the corpus has changed since last run, say "no new signal this week — check back when the corpus grows" instead of manufacturing stale pitches.
+
 You also receive your siblings' latest reports (Guy on pipeline health, Buddy on commitment triage, Dood on security, Milli on the wiki). These are ADDITIONAL pitch fuel. If Dood found security drift, that could be a pitch ("what if the RLS audit becomes a network-wide security offering?"). If Buddy says commitments are stale, that's a pattern worth pitching against. Use siblings as signal, not as constraints.
 
 Return exactly 3 pitches. Return JSON only, no commentary before or after.`;
@@ -447,11 +451,37 @@ function renderMarkdown(report: BruhReport): string {
 }
 
 // ── Entrypoint ─────────────────────────────────────
+async function buildHistoryContext(): Promise<string> {
+  const history = await readOwnHistory(AGENT_ID, 4);
+  if (history.length === 0) return "";
+
+  const lines: string[] = [];
+  lines.push("\n# Your previous outputs (DON'T REPEAT THESE)");
+  lines.push("");
+  for (const h of history) {
+    lines.push(`## Run: ${h.run_at}`);
+    const pitches = (h.findings as { pitches?: Array<{ title: string; observation?: string }> }).pitches;
+    if (pitches?.length) {
+      for (const p of pitches) {
+        lines.push(`- ALREADY PITCHED: "${p.title}"${p.observation ? ` — ${p.observation.slice(0, 120)}` : ""}`);
+      }
+    } else {
+      lines.push(h.markdown_preview.slice(0, 300));
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
 export async function runWhatIf(): Promise<BruhReport> {
-  const [ctx, siblingContext] = await Promise.all([gatherCorpus(30), readSiblings()]);
+  const [ctx, siblingContext, historyContext] = await Promise.all([
+    gatherCorpus(30),
+    readSiblings(),
+    buildHistoryContext(),
+  ]);
   const anthropic = getAnthropicClient(60_000);
 
-  const userMessage = buildUserMessage(ctx) + siblingContext;
+  const userMessage = buildUserMessage(ctx) + siblingContext + historyContext;
 
   const response = await anthropic.messages.create({
     model: MODEL,
