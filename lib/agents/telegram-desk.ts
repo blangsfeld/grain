@@ -14,7 +14,8 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { getAnthropicClient } from "@/lib/anthropic";
 import { readLatestAgentOutput } from "@/lib/agents/agent-output";
 import { runTimiQuery } from "@/lib/agents/notion-steward";
-import { runBuddyQuery } from "@/lib/agents/ea";
+import { runBuddyQueryExtended, runBuddyAdd } from "@/lib/agents/ea";
+import { runMilliIngest } from "@/lib/agents/wiki-librarian";
 import { runBruhQuery } from "@/lib/agents/what-if";
 
 const MODEL = "claude-haiku-4-5-20251001";
@@ -49,10 +50,14 @@ export type Destination =
 
 export type TargetAgent = "timi" | "buddy" | "guy" | "dood" | "bruh" | "clark" | "milli" | null;
 
+export type AgentIntent = "query" | "add" | "ingest";
+
 interface Classification {
   kind: CaptureKind;
   destination: Destination | null;
   target_agent: TargetAgent;
+  /** What Ben wants the agent to do. Most commands are queries. */
+  intent: AgentIntent;
   question: string | null;
   reason: string;
   reply: string;
@@ -75,8 +80,12 @@ const SYSTEM_PROMPT = `You are Keys, the Telegram front door for Ben Langsfeld's
    - "loops" — an open thread/question he needs to return to
    - "skip" — probably shouldn't be saved (ephemeral chatter)
 
-3. For commands, identify the target agent and extract the clean question:
-   - target_agent: one of "timi" (Notion people), "buddy" (commitments/EA), "guy" (pipeline health), "dood" (security), "bruh" (pitches/what-ifs), "clark" (voice/essays), "milli" (wiki), or null if no specific agent targeted
+3. For commands, identify the target agent, the intent, and the clean question:
+   - target_agent: one of "timi" (Notion people), "buddy" (commitments/EA + Notion personal list), "guy" (pipeline health), "dood" (security), "bruh" (pitches/what-ifs), "clark" (voice/essays), "milli" (wiki), or null if no specific agent targeted
+   - intent: "query" (ask a question), "add" (write a new item), or "ingest" (process an external link/URL). Default is "query".
+     · "add to my list: X" / "remind me to X" / "add X to buddy" → target_agent: "buddy", intent: "add", question: the clean statement to add
+     · A bare URL dropped into the chat (no other words, or just words like "ingest this") → target_agent: "milli", intent: "ingest", question: the URL itself
+     · Everything else that names an agent → intent: "query"
    - question: the actual task/question stripped of dispatch words ("ask Timi who..." → question: "Who...")
 
 4. Write a short reply. Rules:
@@ -92,12 +101,13 @@ Return strict JSON only:
   "kind": "capture|query|command|unknown",
   "destination": "wiki-inbox|ideas|decisions|commitments|reference|loops|skip",
   "target_agent": "timi|buddy|guy|dood|bruh|clark|milli|null",
+  "intent": "query|add|ingest",
   "question": "clean question or null",
   "reason": "one short sentence",
   "reply": "what you send back to Ben"
 }
 
-For non-commands, set target_agent and question to null. For non-captures, set destination to null.`;
+For non-commands, set target_agent, intent, and question to null/query. For non-captures, set destination to null.`;
 
 function buildUserPrompt(text: string): string {
   return `Message from Ben:
@@ -110,6 +120,8 @@ Classify and respond. JSON only.`;
 }
 
 const VALID_AGENTS: TargetAgent[] = ["timi", "buddy", "guy", "dood", "bruh", "clark", "milli"];
+
+const VALID_INTENTS: AgentIntent[] = ["query", "add", "ingest"];
 
 function parseClassification(raw: string): Classification | null {
   const cleaned = raw.replace(/```(?:json)?\s*|\s*```/g, "").trim();
@@ -125,10 +137,14 @@ function parseClassification(raw: string): Classification | null {
     const question = typeof parsed.question === "string" && parsed.question.trim().length > 0
       ? parsed.question.trim()
       : null;
+    const intent: AgentIntent = VALID_INTENTS.includes(parsed.intent as AgentIntent)
+      ? (parsed.intent as AgentIntent)
+      : "query";
     return {
       kind: parsed.kind as CaptureKind,
       destination: parsed.destination ?? null,
       target_agent: target,
+      intent,
       question,
       reason: parsed.reason ?? "",
       reply: parsed.reply,
@@ -155,6 +171,7 @@ export async function classifyMessage(text: string): Promise<Classification> {
         kind: "unknown",
         destination: null,
         target_agent: null,
+        intent: "query",
         question: null,
         reason: "classifier parse failure",
         reply: "Got it, but couldn't classify. Filed as unknown — check back at /boot.",
@@ -167,6 +184,7 @@ export async function classifyMessage(text: string): Promise<Classification> {
       kind: "unknown",
       destination: null,
       target_agent: null,
+      intent: "query",
       question: null,
       reason: `classifier error: ${msg}`,
       reply: "Classifier offline — stored as unknown. I'll retry later.",
@@ -491,8 +509,31 @@ async function answerQuery(question: string): Promise<string> {
 
 async function dispatchAgentCommand(
   target: TargetAgent,
+  intent: AgentIntent,
   question: string,
 ): Promise<string> {
+  // Milli URL ingest — intent="ingest" routes here regardless of query/add shape.
+  if (target === "milli" && intent === "ingest") {
+    try {
+      const { url, title, kind, saved_to } = await runMilliIngest(question);
+      return `Milli ingested ${kind === "video" ? "video" : "link"}: **${title}**\n→ ${saved_to}\n\n_${url}_`;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Milli ingest failed: ${msg}`;
+    }
+  }
+
+  // Buddy add — "add to list" flow writes to Notion Personal Commitments.
+  if (target === "buddy" && intent === "add") {
+    try {
+      const { url, category, priority } = await runBuddyAdd({ statement: question, source: "Buddy" });
+      return `Added to your list: "${question}"\n_${category} · ${priority}_\n${url}`;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Buddy add failed: ${msg}`;
+    }
+  }
+
   switch (target) {
     case "timi": {
       try {
@@ -505,8 +546,8 @@ async function dispatchAgentCommand(
     }
     case "buddy": {
       try {
-        const { answer, commitment_count } = await runBuddyQuery(question);
-        return `${answer}\n\n_Buddy · ${commitment_count} commitments scanned_`;
+        const { answer, commitment_count } = await runBuddyQueryExtended(question);
+        return `${answer}\n\n_Buddy · ${commitment_count} items scanned (kept + heard)_`;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         return `Buddy errored: ${msg}`;
@@ -525,8 +566,9 @@ async function dispatchAgentCommand(
     case "guy":
     case "dood":
     case "clark":
+      return `${target[0].toUpperCase() + target.slice(1)} doesn't have an on-demand query mode yet. Logged for the next cron run.`;
     case "milli":
-      return `${target[0].toUpperCase() + target.slice(1)} doesn't have an on-demand query mode yet — only Timi, Buddy, and Bruh do. Logged this for the next cron run.`;
+      return "Milli handles URL ingest (drop a link) but doesn't have a query mode yet. Logged for the next cron run.";
     default:
       return "No target agent identified. Logged as a generic command.";
   }
@@ -569,7 +611,11 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<{
   // agent's last cron output.
   if (classification.target_agent) {
     const question = classification.question || text;
-    classification.reply = await dispatchAgentCommand(classification.target_agent, question);
+    classification.reply = await dispatchAgentCommand(
+      classification.target_agent,
+      classification.intent,
+      question,
+    );
   } else if (classification.kind === "query") {
     // Generic query with no named agent — use sibling-context synthesis
     classification.reply = await answerQuery(text);

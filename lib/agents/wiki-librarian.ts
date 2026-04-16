@@ -14,6 +14,7 @@ import {
   readLatestAgentOutput,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
+import { ingestFromUrl, detectUrlType, type UrlType } from "@/lib/url-ingest";
 
 const AGENT_ID = "wiki-librarian";
 const PERSONA = "Milli";
@@ -313,4 +314,56 @@ export async function runAndWriteWikiLibrarian(): Promise<{ output_id: string; r
   });
 
   return { output_id: id, report };
+}
+
+// ── Telegram-triggered URL ingest ──────────────────
+// Keys dispatches here when Ben drops a link (article, YouTube video,
+// Claude shared chat) into Telegram with intent=ingest. Wraps the existing
+// ingest pipeline and returns a Telegram-friendly confirmation.
+//
+// Videos currently extract from og: metadata only (no transcript yet). If
+// Ben wants richer video processing later we'll add a transcript fetcher.
+
+export interface MilliIngestResult {
+  url: string;
+  title: string;
+  kind: UrlType;
+  atoms: number;
+  saved_to: string;
+}
+
+function extractFirstUrl(text: string): string | null {
+  const match = text.match(/https?:\/\/\S+/i);
+  return match?.[0] ?? null;
+}
+
+export async function runMilliIngest(input: string): Promise<MilliIngestResult> {
+  const url = extractFirstUrl(input) ?? input.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    throw new Error("No URL found in message");
+  }
+
+  const kind = detectUrlType(url);
+  const result = await ingestFromUrl(url);
+
+  let savedTo: string;
+  switch (result.status) {
+    case "extracted":
+      savedTo = `dx_atoms (${result.atoms} atom${result.atoms === 1 ? "" : "s"} across ${Object.keys(result.pass_results).length} passes)`;
+      break;
+    case "duplicate":
+      savedTo = "already ingested — skipped";
+      break;
+    case "dismissed":
+      savedTo = "classifier dismissed — not saved";
+      break;
+  }
+
+  return {
+    url,
+    title: result.title,
+    kind,
+    atoms: result.atoms,
+    saved_to: savedTo,
+  };
 }

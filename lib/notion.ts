@@ -146,6 +146,76 @@ export function getRelationIds(page: NotionPage, propName: string): string[] {
   return items.map((i) => i.id);
 }
 
+// ── Property builders (for writes) ─────────────────
+// Notion writes expect properties in the typed-object shape. These builders
+// keep the call sites in agent code readable.
+
+export function titleProp(text: string): NotionPropertyValue {
+  return {
+    id: "",
+    type: "title",
+    title: [{ type: "text", text: { content: text } }],
+  } as NotionPropertyValue;
+}
+
+export function selectProp(name: string): NotionPropertyValue {
+  return {
+    id: "",
+    type: "select",
+    select: { name },
+  } as NotionPropertyValue;
+}
+
+export function richTextProp(text: string): NotionPropertyValue {
+  return {
+    id: "",
+    type: "rich_text",
+    rich_text: [{ type: "text", text: { content: text } }],
+  } as NotionPropertyValue;
+}
+
+export function dateProp(startISO: string): NotionPropertyValue {
+  return {
+    id: "",
+    type: "date",
+    date: { start: startISO },
+  } as NotionPropertyValue;
+}
+
+export function relationProp(pageIds: string[]): NotionPropertyValue {
+  return {
+    id: "",
+    type: "relation",
+    relation: pageIds.map((id) => ({ id })),
+  } as NotionPropertyValue;
+}
+
+// ── Page create ────────────────────────────────────
+
+export interface CreatePageResult {
+  id: string;
+  url: string;
+}
+
+/**
+ * Create a page in a database. `properties` uses the Notion property-object
+ * shape — use the prop builders above to construct it.
+ */
+export async function createPage(
+  database_id: string,
+  properties: Record<string, NotionPropertyValue>,
+): Promise<CreatePageResult> {
+  const body = {
+    parent: { database_id },
+    properties,
+  };
+  const res = await notionFetch<{ id: string; url: string }>("/pages", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return { id: res.id, url: res.url };
+}
+
 // ── Age helpers ────────────────────────────────────
 
 export function daysSince(iso: string | null): number | null {

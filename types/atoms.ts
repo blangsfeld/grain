@@ -49,12 +49,32 @@ export interface VoiceContent {
   context: string;
 }
 
+export type CommitmentCategory =
+  | "Personal"
+  | "Dunbar"
+  | "Prospect"
+  | "Expenses"
+  | "Travel"
+  | "Medical"
+  | "Residence"
+  | "BUCK"
+  | "Wild"
+  | "Giant Ant"
+  | "Part+Sum"
+  | "VTPro"
+  | "Its Nice That"
+  | "Ok Cool"
+  | "CLIP"
+  | "Other";
+
 export interface CommitmentContent {
   statement: string;
   type: "commitment" | "follow_up";
   person: string | null;
   company: string | null;
   project: string | null;
+  /** Life-domain bucket matching the Notion Personal Commitments DB. */
+  category: CommitmentCategory;
   due_date: string | null;
   conviction: "firm" | "soft" | "aspirational";
 }

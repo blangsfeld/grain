@@ -19,6 +19,7 @@ import {
 import { classifyTranscript, getExtractionPlan } from "@/lib/classify";
 import { extractAtoms } from "@/lib/atom-extract";
 import { insertAtoms } from "@/lib/atom-db";
+import { syncCommitmentsFromAtoms } from "@/lib/commitments-sync";
 import { loadRegistries, resolveAtoms } from "@/lib/resolve";
 import { buildBootContext } from "@/lib/vault-scan";
 
@@ -247,7 +248,24 @@ export async function ingestFromGranola(options?: {
       }
 
       // Insert atoms (meta atoms excluded)
-      await insertAtoms(persistAtoms);
+      const inserted = await insertAtoms(persistAtoms);
+
+      // Mirror commitment atoms into dx_commitments so Buddy / Notion promote
+      // have a structured row to query. Failures here must not fail the ingest
+      // — the atoms landed; sync can be retried by the backfill script.
+      try {
+        const res = await syncCommitmentsFromAtoms(inserted);
+        if (res.skipped_malformed > 0) {
+          console.warn(
+            `commitments-sync: ${res.skipped_malformed} malformed atom(s) for "${meeting.title}"`,
+          );
+        }
+      } catch (err) {
+        console.error(
+          `commitments-sync failed for "${meeting.title}":`,
+          err instanceof Error ? err.message : err,
+        );
+      }
 
       // Tally
       result.processed++;

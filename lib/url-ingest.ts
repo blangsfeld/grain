@@ -12,10 +12,19 @@ import { loadRegistries, resolveAtoms } from "@/lib/resolve";
 
 // ─── URL type detection ─────────────────────────
 
-type UrlType = "claude_chat" | "article";
+export type UrlType = "claude_chat" | "video" | "article";
 
-function detectUrlType(url: string): UrlType {
+export function detectUrlType(url: string): UrlType {
   if (url.includes("claude.ai/share")) return "claude_chat";
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (host.endsWith("youtube.com") || host === "youtu.be" || host.endsWith("vimeo.com")) {
+      return "video";
+    }
+  } catch {
+    // fall through to article
+  }
   return "article";
 }
 

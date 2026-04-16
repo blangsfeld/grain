@@ -20,6 +20,19 @@ import {
   type Classification,
   type CommitmentRow,
 } from "@/lib/agents/ea-classifier";
+import {
+  queryDatabase,
+  createPage,
+  titleProp,
+  selectProp,
+  richTextProp,
+  dateProp,
+  getTitle,
+  getSelect,
+  getDate,
+  getRichText,
+} from "@/lib/notion";
+import type { CommitmentCategory } from "@/types/atoms";
 
 const AGENT_ID = "ea";
 const PERSONA = "Buddy";
@@ -392,6 +405,212 @@ export async function runBuddyQuery(question: string): Promise<BuddyQueryResult>
   return {
     answer: answer || "Reasoning step returned empty. Try rephrasing.",
     commitment_count: commitments.length,
+    question,
+  };
+}
+
+// ── Notion personal commitments — kept list ────────
+// The Notion DB is Ben's curated list. dx_commitments is the heard list.
+// runBuddyAdd writes to Notion; read helpers support the extended query mode.
+
+const COMMITMENT_CATEGORIES: CommitmentCategory[] = [
+  "Personal", "Dunbar", "Prospect", "Expenses", "Travel", "Medical",
+  "Residence", "BUCK", "Wild", "Giant Ant", "Part+Sum", "VTPro",
+  "Its Nice That", "Ok Cool", "CLIP", "Other",
+];
+
+type Priority = "High" | "Medium" | "Low";
+
+interface NotionCommitment {
+  id: string;
+  url: string;
+  name: string;
+  category: string | null;
+  status: string | null;
+  priority: string | null;
+  due_date: string | null;
+  added_via: string | null;
+  notes: string;
+}
+
+function personalDbId(): string {
+  const id = process.env.NOTION_PERSONAL_COMMITMENTS_DB_ID;
+  if (!id) throw new Error("NOTION_PERSONAL_COMMITMENTS_DB_ID missing");
+  return id;
+}
+
+async function inferCategory(statement: string): Promise<CommitmentCategory> {
+  const anthropic = getAnthropicClient(15_000);
+  const res = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 40,
+    system: `Pick exactly one category for Ben's commitment. Return only the category name, nothing else.
+
+Categories and what they mean:
+- Personal: Ben's health, hobbies, family, household admin not tied to a home
+- Dunbar: 67 Dunbar Rd (country home) — contractors, upkeep, physical things
+- Prospect: 442 Prospect (Brooklyn home) — contractors, upkeep, physical things
+- Expenses: reimbursements, invoices, receipts, accounting
+- Travel: flights, hotels, itineraries
+- Medical: appointments, prescriptions, health admin
+- Residence: network-level CCO work, cross-company coordination
+- BUCK / Wild / Giant Ant / Part+Sum / VTPro / Its Nice That / Ok Cool / CLIP: work serving that specific company
+- Other: falls outside all of the above`,
+    messages: [{ role: "user", content: statement }],
+  });
+  const text = res.content[0]?.type === "text" ? res.content[0].text.trim() : "";
+  const match = COMMITMENT_CATEGORIES.find((c) => c.toLowerCase() === text.toLowerCase());
+  return match ?? "Other";
+}
+
+export interface BuddyAddInput {
+  statement: string;
+  category?: CommitmentCategory;
+  priority?: Priority;
+  due_date?: string; // YYYY-MM-DD
+  notes?: string;
+  source?: "Buddy" | "Manual" | "Meeting";
+}
+
+export interface BuddyAddResult {
+  url: string;
+  page_id: string;
+  category: CommitmentCategory;
+  priority: Priority;
+}
+
+/**
+ * Add a commitment to Ben's Notion Personal Commitments DB (the kept list).
+ * Keys dispatches here when classifier returns intent=add.
+ */
+export async function runBuddyAdd(input: BuddyAddInput): Promise<BuddyAddResult> {
+  const statement = input.statement.trim();
+  if (!statement) throw new Error("Statement is empty");
+
+  const category = input.category ?? (await inferCategory(statement));
+  const priority: Priority = input.priority ?? "Medium";
+  const source = input.source ?? "Buddy";
+
+  const properties: Record<string, ReturnType<typeof titleProp>> = {
+    Name: titleProp(statement),
+    Category: selectProp(category),
+    Status: selectProp("Open"),
+    Priority: selectProp(priority),
+    "Added Via": selectProp(source),
+  };
+  if (input.due_date) properties["Due Date"] = dateProp(input.due_date);
+  if (input.notes) properties.Notes = richTextProp(input.notes);
+
+  const page = await createPage(personalDbId(), properties);
+  return { url: page.url, page_id: page.id, category, priority };
+}
+
+/**
+ * Read the Notion personal commitments list. Default: open + in-progress.
+ */
+export async function readPersonalCommitments(
+  options: { includeDone?: boolean; category?: CommitmentCategory } = {},
+): Promise<NotionCommitment[]> {
+  const filters: unknown[] = [];
+  if (!options.includeDone) {
+    filters.push({ property: "Status", select: { does_not_equal: "Done" } });
+  }
+  if (options.category) {
+    filters.push({ property: "Category", select: { equals: options.category } });
+  }
+  const filter = filters.length === 0
+    ? undefined
+    : filters.length === 1
+    ? filters[0]
+    : { and: filters };
+
+  const pages = await queryDatabase(personalDbId(), {
+    filter,
+    sorts: [{ property: "Due Date", direction: "ascending" }],
+  });
+
+  return pages.map((p) => ({
+    id: p.id,
+    url: p.url,
+    name: getTitle(p, "Name"),
+    category: getSelect(p, "Category"),
+    status: getSelect(p, "Status"),
+    priority: getSelect(p, "Priority"),
+    due_date: getDate(p, "Due Date"),
+    added_via: getSelect(p, "Added Via"),
+    notes: getRichText(p, "Notes"),
+  }));
+}
+
+// ── Extended query mode (reads Notion + dx_commitments) ──
+
+export async function runBuddyQueryExtended(question: string): Promise<BuddyQueryResult> {
+  const [meetings, personal] = await Promise.all([
+    gatherAllCommitments(),
+    readPersonalCommitments({ includeDone: false }).catch((err) => {
+      console.warn("Notion read failed, falling back to meetings only:", err instanceof Error ? err.message : err);
+      return [] as NotionCommitment[];
+    }),
+  ]);
+
+  const lines: string[] = [];
+  lines.push(`# Kept list — Ben's Notion Personal Commitments (${personal.length} open/in-progress)`);
+  lines.push("_Curated by Ben. Trusted. Source of truth for what he's actively tracking._");
+  lines.push("");
+  if (personal.length === 0) {
+    lines.push("_(empty)_");
+  } else {
+    for (const p of personal) {
+      const meta: string[] = [];
+      if (p.category) meta.push(p.category);
+      if (p.priority) meta.push(`priority: ${p.priority}`);
+      if (p.status) meta.push(`status: ${p.status}`);
+      if (p.due_date) meta.push(`due: ${p.due_date}`);
+      if (p.added_via) meta.push(`via: ${p.added_via}`);
+      lines.push(`- "${p.name}" [${meta.join(" · ")}]`);
+      if (p.notes) lines.push(`  notes: ${p.notes}`);
+    }
+  }
+  lines.push("");
+  lines.push(`# Heard list — dx_commitments (${meetings.length} from meetings — auto-extracted, noisier)`);
+  lines.push("");
+  for (const c of meetings) {
+    const meta: string[] = [];
+    if (c.person) meta.push(`person: ${c.person}`);
+    if (c.status) meta.push(`status: ${c.status}`);
+    if (c.classifier_weight) meta.push(`weight: ${c.classifier_weight}`);
+    if (c.category) meta.push(c.category);
+    if (c.meeting_title) meta.push(`meeting: ${c.meeting_title}`);
+    if (c.meeting_date) meta.push(c.meeting_date);
+    if (c.age_days !== null) meta.push(`age: ${c.age_days}d`);
+    if (c.overdue_days !== null) meta.push(`overdue: ${c.overdue_days}d`);
+    if (c.due_date) meta.push(`due: ${c.due_date}`);
+    lines.push(`- "${c.statement}" [${meta.join(" · ")}]`);
+  }
+
+  const anthropic = getAnthropicClient(60_000);
+  const response = await anthropic.messages.create({
+    model: QUERY_MODEL,
+    max_tokens: 1200,
+    system: QUERY_PERSONA_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content:
+          `${lines.join("\n")}\n\n---\n\nBen's question: "${question}"\n\n` +
+          "When answering:\n" +
+          "- If the question is about personal life admin (houses, medical, travel, expenses, family), lead with the kept list.\n" +
+          "- If the question is about meeting follow-through (who owes what, what's overdue), lead with the heard list.\n" +
+          "- If Ben asks 'what's on my list', assume the kept list unless he specifies.\n" +
+          "- Cite specific items with verbatim statements.",
+      },
+    ],
+  });
+
+  const answer = response.content[0]?.type === "text" ? response.content[0].text : "";
+  return {
+    answer: answer || "Reasoning step returned empty. Try rephrasing.",
+    commitment_count: meetings.length + personal.length,
     question,
   };
 }
