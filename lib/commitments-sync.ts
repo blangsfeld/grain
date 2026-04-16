@@ -27,6 +27,17 @@ function isCommitmentContent(c: unknown): c is CommitmentContent {
 }
 
 /**
+ * Claude occasionally emits the literal string "null" instead of JSON null
+ * when the prompt says `"due_date": "YYYY-MM-DD or null"`. Coerce defensively.
+ */
+function coerceNullable(v: string | null | undefined): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s || s.toLowerCase() === "null") return null;
+  return s;
+}
+
+/**
  * Upsert commitment atoms into dx_commitments.
  *
  * `atoms` may include non-commitment atoms; those are skipped. Status for
@@ -56,11 +67,11 @@ export async function syncCommitmentsFromAtoms(
       id: atom.id,
       statement: c.statement,
       type: c.type,
-      person: c.person ?? null,
-      company: c.company ?? null,
-      project: c.project ?? null,
-      category: c.category ?? null,
-      due_date: c.due_date ?? null,
+      person: coerceNullable(c.person),
+      company: coerceNullable(c.company),
+      project: coerceNullable(c.project),
+      category: coerceNullable(c.category),
+      due_date: coerceNullable(c.due_date),
       transcript_id: atom.transcript_id ?? null,
       meeting_title: atom.source_title ?? null,
       meeting_date: atom.source_date ?? null,
