@@ -18,7 +18,7 @@
     },
     {
       "path": "/api/cron/grain-steward",
-      "schedule": "13 * * * *"
+      "schedule": "53 12 * * *"
     },
     {
       "path": "/api/cron/ea",
