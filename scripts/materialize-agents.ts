@@ -87,6 +87,7 @@ async function materializeDeskCaptures() {
     .from("desk_captures")
     .select("id, created_at, raw_text, kind, proposed_destination, classification_reason, reply_text")
     .eq("status", "pending")
+    .eq("kind", "capture") // only file actual captures, not queries/commands/unknowns
     .order("created_at", { ascending: true });
 
   if (error) {
