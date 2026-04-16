@@ -256,19 +256,39 @@ async function gatherQueryData(question: string): Promise<string> {
     }
   }
 
-  // Commitments
+  // Commitments — join with labels so Keys respects Buddy's training
   if (q.includes("commitment") || q.includes("open loop") || q.includes("what did i") || q.includes("owe") || q.includes("promised")) {
     const { data } = await supabase
       .from("dx_commitments")
-      .select("statement, person, category, meeting_date, status")
+      .select("id, statement, person, category, meeting_date, status, commitment_labels(weight, reason)")
       .eq("status", "open")
       .order("meeting_date", { ascending: false })
-      .limit(10);
+      .limit(15);
 
     if (data?.length) {
-      lines.push(`## Open commitments (${data.length}):`);
-      for (const r of data) {
-        lines.push(`- ${r.person}: "${r.statement}" (${r.category}, ${r.meeting_date})`);
+      // Separate real commitments from scaffolding using Buddy's labels
+      type Row = { id: string; statement: string; person: string | null; category: string | null; meeting_date: string | null; status: string | null; commitment_labels: Array<{ weight: string; reason: string | null }> | { weight: string; reason: string | null } | null };
+      const rows = data as unknown as Row[];
+      const real: Row[] = [];
+      const skipped: string[] = [];
+
+      for (const r of rows) {
+        const label = Array.isArray(r.commitment_labels) ? r.commitment_labels[0] : r.commitment_labels;
+        if (label?.weight === "skip") {
+          skipped.push(r.statement);
+        } else {
+          real.push(r);
+        }
+      }
+
+      lines.push(`## Open commitments (${real.length} real, ${skipped.length} filtered as scaffolding):`);
+      for (const r of real) {
+        const label = Array.isArray(r.commitment_labels) ? r.commitment_labels[0] : r.commitment_labels;
+        const weightTag = label ? ` [${label.weight}]` : "";
+        lines.push(`- ${r.person}: "${r.statement}"${weightTag} (${r.category}, ${r.meeting_date})`);
+      }
+      if (skipped.length > 0) {
+        lines.push(`\n_Filtered ${skipped.length} items Buddy labeled as skip (scaffolding/logistics)._`);
       }
       lines.push("");
     }
@@ -289,6 +309,47 @@ async function gatherQueryData(question: string): Promise<string> {
         const names = participants?.map((p) => p.name).join(", ") ?? "?";
         lines.push(`- ${r.source_title} (${r.source_date}) — ${names}`);
       }
+      lines.push("");
+    }
+  }
+
+  // Vault content (wiki, projects, priorities, decisions from vault_snapshots)
+  if (q.includes("wiki") || q.includes("skill") || q.includes("technique") || q.includes("pattern") || q.includes("how-to") || q.includes("howto")) {
+    const { data } = await supabase
+      .from("vault_snapshots")
+      .select("content")
+      .in("kind", ["wiki_index", "wiki_pages"])
+      .limit(2);
+    if (data?.length) {
+      for (const r of data) {
+        lines.push((r.content as string).slice(0, 2000));
+      }
+      lines.push("");
+    }
+  }
+
+  if (q.includes("project") || q.includes("app") || q.includes("what am i building") || q.includes("stack") || q.includes("canvas") || q.includes("grain") || q.includes("lore") || q.includes("buck") || q.includes("source")) {
+    const { data } = await supabase
+      .from("vault_snapshots")
+      .select("content")
+      .eq("kind", "project_summaries")
+      .maybeSingle();
+    if (data) {
+      lines.push("## Project summaries from vault:");
+      lines.push((data.content as string).slice(0, 2500));
+      lines.push("");
+    }
+  }
+
+  if (q.includes("priorit") || q.includes("what's hot") || q.includes("what am i focused") || q.includes("initiative")) {
+    const { data } = await supabase
+      .from("vault_snapshots")
+      .select("content")
+      .eq("kind", "active_priorities")
+      .maybeSingle();
+    if (data) {
+      lines.push("## Active priorities:");
+      lines.push((data.content as string).slice(0, 1500));
       lines.push("");
     }
   }

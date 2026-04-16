@@ -294,12 +294,22 @@ export async function runAndWriteWikiLibrarian(): Promise<{ output_id: string; r
     had_siblings: { guy: !!siblings.guy, buddy: !!siblings.buddy },
   };
 
+  // Rich findings for sibling consumption — Bruh reads wiki_catalog for coding pitches,
+  // other agents can reference techniques and project state
+  const wikiIndexPath = join(WIKI_ROOT, "index.md");
+  const wikiIndex = existsSync(wikiIndexPath) ? readFileSync(wikiIndexPath, "utf-8") : null;
+
   const { id } = await writeAgentOutput({
     agent_id: AGENT_ID,
     severity,
     markdown,
-    findings: report.facts,
-    metadata: { version: "0.2-agent", model: MODEL, reasoning: true },
+    findings: {
+      ...report.facts,
+      wiki_catalog: wikiIndex, // full index.md so siblings know what's in the wiki
+      inbox_files: facts.inbox_items.slice(0, 10), // actual filenames
+      page_counts: facts.page_counts,
+    },
+    metadata: { version: "0.3-agent", model: MODEL, reasoning: true },
   });
 
   return { output_id: id, report };
