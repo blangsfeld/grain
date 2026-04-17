@@ -105,11 +105,21 @@ export async function ingestFromGranola(options?: {
   backfill?: boolean;
   force?: boolean;      // Skip dedup — re-extract even if transcript exists
 }): Promise<IngestResult> {
+  // Preflight: fail fast with a loud error if the Granola key is missing.
+  // A silent throw from the first api() call has frozen the sync cursor
+  // before; surface it here instead of letting it crash mid-loop.
+  if (!process.env.GRANOLA_API_KEY) {
+    const msg = "GRANOLA_API_KEY not set — ingest cannot run. Add it to the Vercel production env.";
+    console.error(`[granola-ingest] PREFLIGHT FAILED: ${msg}`);
+    throw new Error(msg);
+  }
+
   const db = getSupabaseAdmin();
 
   // Determine start date
   const syncState = await readSyncState();
   const since = options?.since ?? syncState?.last_synced_at ?? new Date(Date.now() - 7 * 86400000).toISOString();
+  console.log(`[granola-ingest] starting since=${since} force=${!!options?.force} backfill=${!!options?.backfill}`);
 
   // Load entity registries once
   const { contacts, domains } = await loadRegistries();
@@ -305,6 +315,10 @@ export async function ingestFromGranola(options?: {
   const GRACE_WINDOW_MS = 30 * 60 * 1000;
   const syncTimestamp = new Date(Date.now() - GRACE_WINDOW_MS).toISOString();
   await writeSyncState({ last_synced_at: syncTimestamp });
+
+  console.log(
+    `[granola-ingest] done processed=${result.processed} skipped=${result.skipped} dismissed=${result.dismissed} atoms=${result.total_atoms} cursor=${syncTimestamp}`,
+  );
 
   return result;
 }

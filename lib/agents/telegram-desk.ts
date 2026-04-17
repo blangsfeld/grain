@@ -15,6 +15,14 @@ import { getAnthropicClient } from "@/lib/anthropic";
 import { readLatestAgentOutput } from "@/lib/agents/agent-output";
 import { runTimiQuery } from "@/lib/agents/notion-steward";
 import { runBuddyQueryExtended, runBuddyAdd } from "@/lib/agents/ea";
+import {
+  runBuddyPromoteSurface,
+  resolvePromotionReply,
+} from "@/lib/agents/buddy-promote";
+import {
+  runBuddyCloseSurface,
+  resolveCloseReply,
+} from "@/lib/agents/buddy-close";
 import { runMilliIngest } from "@/lib/agents/wiki-librarian";
 import { runBruhQuery } from "@/lib/agents/what-if";
 
@@ -50,7 +58,14 @@ export type Destination =
 
 export type TargetAgent = "timi" | "buddy" | "guy" | "dood" | "bruh" | "clark" | "milli" | null;
 
-export type AgentIntent = "query" | "add" | "ingest";
+export type AgentIntent =
+  | "query"
+  | "add"
+  | "ingest"
+  | "promote_surface"
+  | "promote_reply"
+  | "close_surface"
+  | "close_reply";
 
 interface Classification {
   kind: CaptureKind;
@@ -82,9 +97,12 @@ const SYSTEM_PROMPT = `You are Keys, the Telegram front door for Ben Langsfeld's
 
 3. For commands, identify the target agent, the intent, and the clean question:
    - target_agent: one of "timi" (Notion people), "buddy" (commitments/EA + Notion personal list), "guy" (pipeline health), "dood" (security), "bruh" (pitches/what-ifs), "clark" (voice/essays), "milli" (wiki), or null if no specific agent targeted
-   - intent: "query" (ask a question), "add" (write a new item), or "ingest" (process an external link/URL). Default is "query".
-     · "add to my list: X" / "remind me to X" / "add X to buddy" → target_agent: "buddy", intent: "add", question: the clean statement to add
-     · A bare URL dropped into the chat (no other words, or just words like "ingest this") → target_agent: "milli", intent: "ingest", question: the URL itself
+   - intent: default is "query". Other values:
+     · "add" — writing a new item: "add to my list: X" / "remind me to X" / "add X to buddy" → target_agent: "buddy", intent: "add", question: the clean statement
+     · "ingest" — a bare URL drop (with no other words or just "ingest this") → target_agent: "milli", intent: "ingest", question: the URL
+     · "promote_surface" — "buddy promote" / "what should I promote" / "show me promotion candidates" / "surface new items for my list" → target_agent: "buddy", intent: "promote_surface", question: null
+     · "close_surface" — "buddy cleanup" / "what's stale" / "clean up my list" / "close loop" → target_agent: "buddy", intent: "close_surface", question: null
+     · (promote/close replies like "promote 2,5" or "done 1 recur 2" are matched by regex before you see them — never emit "promote_reply" or "close_reply" yourself)
      · Everything else that names an agent → intent: "query"
    - question: the actual task/question stripped of dispatch words ("ask Timi who..." → question: "Who...")
 
@@ -121,7 +139,15 @@ Classify and respond. JSON only.`;
 
 const VALID_AGENTS: TargetAgent[] = ["timi", "buddy", "guy", "dood", "bruh", "clark", "milli"];
 
-const VALID_INTENTS: AgentIntent[] = ["query", "add", "ingest"];
+const VALID_INTENTS: AgentIntent[] = [
+  "query",
+  "add",
+  "ingest",
+  "promote_surface",
+  "promote_reply",
+  "close_surface",
+  "close_reply",
+];
 
 function parseClassification(raw: string): Classification | null {
   const cleaned = raw.replace(/```(?:json)?\s*|\s*```/g, "").trim();
@@ -152,6 +178,64 @@ function parseClassification(raw: string): Classification | null {
   } catch {
     return null;
   }
+}
+
+// ── Pre-classifier (regex short-circuit) ───────────
+// Promote/close replies have a known shape. Matching them here saves a
+// Haiku round-trip and keeps parsing deterministic.
+
+const CLOSE_ACTION_VERBS = /\b(done|close[dn]?|complete[d]?|archive[d]?|recur(?:ring)?|keep|live|active)\b/i;
+
+export function preClassify(text: string): Classification | null {
+  const t = text.trim();
+  if (!t) return null;
+
+  // "promote 2,5" or "promote 2 as: rewrite"
+  if (/^promote\s+\d/i.test(t)) {
+    return {
+      kind: "command",
+      destination: null,
+      target_agent: "buddy",
+      intent: "promote_reply",
+      question: t,
+      reason: "matched promote-reply regex",
+      reply: "dispatching to buddy...",
+    };
+  }
+
+  // "done 1,4 recur 2 keep 3 archive 5,6" — must start with an action verb
+  // followed by a digit, to avoid matching "done." as casual acknowledgement.
+  if (/^(done|close[dn]?|complete[d]?|archive[d]?|recur(?:ring)?|keep)\s+\d/i.test(t)) {
+    return {
+      kind: "command",
+      destination: null,
+      target_agent: "buddy",
+      intent: "close_reply",
+      question: t,
+      reason: "matched close-reply regex",
+      reply: "dispatching to buddy...",
+    };
+  }
+
+  // Also catch close replies that don't start with a verb (e.g. line breaks,
+  // leading whitespace, or replies reformatted by Telegram). Require at least
+  // TWO verb→digit patterns to avoid false positives like "keep active on 3
+  // projects" (which has verbs but no verb-followed-by-digit structure).
+  const verbDigitRx = /\b(done|close[dn]?|complete[d]?|archive[d]?|recur(?:ring)?|keep|live|active)\s+\d/gi;
+  const verbDigitMatches = t.match(verbDigitRx);
+  if (verbDigitMatches && verbDigitMatches.length >= 2) {
+    return {
+      kind: "command",
+      destination: null,
+      target_agent: "buddy",
+      intent: "close_reply",
+      question: t,
+      reason: "matched close-reply multi-verb-digit shape",
+      reply: "dispatching to buddy...",
+    };
+  }
+
+  return null;
 }
 
 export async function classifyMessage(text: string): Promise<Classification> {
@@ -511,6 +595,7 @@ async function dispatchAgentCommand(
   target: TargetAgent,
   intent: AgentIntent,
   question: string,
+  chatId: number,
 ): Promise<string> {
   // Milli URL ingest — intent="ingest" routes here regardless of query/add shape.
   if (target === "milli" && intent === "ingest") {
@@ -531,6 +616,50 @@ async function dispatchAgentCommand(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return `Buddy add failed: ${msg}`;
+    }
+  }
+
+  // Buddy promote — surface candidates from dx_commitments to Telegram.
+  if (target === "buddy" && intent === "promote_surface") {
+    try {
+      const { message } = await runBuddyPromoteSurface(chatId);
+      return message;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Buddy promote failed: ${msg}`;
+    }
+  }
+
+  // Buddy promote reply — "promote 2,5" or "promote 2 as: rewrite"
+  if (target === "buddy" && intent === "promote_reply") {
+    try {
+      const { message } = await resolvePromotionReply(chatId, question);
+      return message;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Promote resolve failed: ${msg}`;
+    }
+  }
+
+  // Buddy cleanup — surface stale items from Notion kept list.
+  if (target === "buddy" && intent === "close_surface") {
+    try {
+      const { message } = await runBuddyCloseSurface(chatId);
+      return message;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Buddy cleanup failed: ${msg}`;
+    }
+  }
+
+  // Buddy close reply — "done 1,4 recur 2 keep 3 archive 5,6"
+  if (target === "buddy" && intent === "close_reply") {
+    try {
+      const { message } = await resolveCloseReply(chatId, question);
+      return message;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Close resolve failed: ${msg}`;
     }
   }
 
@@ -603,8 +732,9 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<{
     return { ok: false, reason: "empty text" };
   }
 
-  // Classify
-  const classification = await classifyMessage(text);
+  // Regex short-circuit for known reply shapes (promote/close). Saves a
+  // Haiku round-trip and keeps parsing deterministic for known formats.
+  const classification = preClassify(text) ?? (await classifyMessage(text));
 
   // If a target agent was identified (from a command OR a query worded like
   // "Buddy, show me..."), dispatch directly — fresher than summarizing the
@@ -615,6 +745,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<{
       classification.target_agent,
       classification.intent,
       question,
+      msg.chat.id,
     );
   } else if (classification.kind === "query") {
     // Generic query with no named agent — use sibling-context synthesis

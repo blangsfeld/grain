@@ -216,6 +216,22 @@ export async function createPage(
   return { id: res.id, url: res.url };
 }
 
+// ── Page update ────────────────────────────────────
+
+/**
+ * Update properties on an existing page. Only properties you pass are changed;
+ * others stay as-is. Use the prop builders to construct values.
+ */
+export async function updatePage(
+  page_id: string,
+  properties: Record<string, NotionPropertyValue>,
+): Promise<void> {
+  await notionFetch(`/pages/${page_id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ properties }),
+  });
+}
+
 // ── Age helpers ────────────────────────────────────
 
 export function daysSince(iso: string | null): number | null {
