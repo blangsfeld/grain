@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.residence.grain-local</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/node</string>
+        <string>/Users/ben/Documents/Apps/grain/node_modules/.bin/tsx</string>
+        <string>/Users/ben/Documents/Apps/grain/scripts/local-orchestrator.ts</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/ben/Documents/Apps/grain</string>
+
+    <key>StartCalendarInterval</key>
+    <array>
+        <!-- Morning: 06:45 local, after Vercel's 11:30 UTC Granola ingest has populated Supabase -->
+        <dict>
+            <key>Hour</key>
+            <integer>6</integer>
+            <key>Minute</key>
+            <integer>45</integer>
+        </dict>
+        <!-- Evening: 19:45 local, catch-up for meetings that happened during the day -->
+        <dict>
+            <key>Hour</key>
+            <integer>19</integer>
+            <key>Minute</key>
+            <integer>45</integer>
+        </dict>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/ben/Library/Logs/grain-local.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/ben/Library/Logs/grain-local.error.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/ben</string>
+    </dict>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>5</integer>
+</dict>
+</plist>
