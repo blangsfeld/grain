@@ -14,7 +14,8 @@ import {
   readLatestAgentOutput,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
-import { ingestFromUrl, detectUrlType, type UrlType } from "@/lib/url-ingest";
+import { detectUrlType, type UrlType } from "@/lib/url-ingest";
+import { writeInboxStub } from "@/lib/agents/wiki-triage";
 
 const AGENT_ID = "wiki-librarian";
 const PERSONA = "Milli";
@@ -317,24 +318,27 @@ export async function runAndWriteWikiLibrarian(): Promise<{ output_id: string; r
 }
 
 // ── Telegram-triggered URL ingest ──────────────────
-// Keys dispatches here when Ben drops a link (article, YouTube video,
-// Claude shared chat) into Telegram with intent=ingest. Wraps the existing
-// ingest pipeline and returns a Telegram-friendly confirmation.
-//
-// Videos currently extract from og: metadata only (no transcript yet). If
-// Ben wants richer video processing later we'll add a transcript fetcher.
+// Keys dispatches here when Ben drops a link in Telegram with intent=ingest.
+// We write a minimal inbox stub to 00-inbox/ and let the next triage tick
+// (06:45 / 19:45 via the local orchestrator, or on-demand via run-milli)
+// do the actual fetch + classify + file. Decoupling "drop at the door" from
+// "shelve properly" keeps Telegram instant and gives Milli a batch to reason
+// over instead of one-shot pipeline runs.
 
 export interface MilliIngestResult {
   url: string;
-  title: string;
   kind: UrlType;
-  atoms: number;
-  saved_to: string;
+  filename: string;
+  queued: true;
 }
 
 function extractFirstUrl(text: string): string | null {
   const match = text.match(/https?:\/\/\S+/i);
   return match?.[0] ?? null;
+}
+
+function stripUrlFromText(text: string, url: string): string {
+  return text.replace(url, "").trim();
 }
 
 export async function runMilliIngest(input: string): Promise<MilliIngestResult> {
@@ -343,27 +347,13 @@ export async function runMilliIngest(input: string): Promise<MilliIngestResult> 
     throw new Error("No URL found in message");
   }
 
-  const kind = detectUrlType(url);
-  const result = await ingestFromUrl(url);
-
-  let savedTo: string;
-  switch (result.status) {
-    case "extracted":
-      savedTo = `dx_atoms (${result.atoms} atom${result.atoms === 1 ? "" : "s"} across ${Object.keys(result.pass_results).length} passes)`;
-      break;
-    case "duplicate":
-      savedTo = "already ingested — skipped";
-      break;
-    case "dismissed":
-      savedTo = "classifier dismissed — not saved";
-      break;
-  }
+  const note = stripUrlFromText(input, url);
+  const { filename } = writeInboxStub(url, note || undefined);
 
   return {
     url,
-    title: result.title,
-    kind,
-    atoms: result.atoms,
-    saved_to: savedTo,
+    kind: detectUrlType(url),
+    filename,
+    queued: true,
   };
 }

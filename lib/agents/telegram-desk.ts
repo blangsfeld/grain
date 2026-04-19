@@ -434,10 +434,15 @@ async function gatherQueryData(question: string): Promise<string> {
 
   // Recent meetings/transcripts
   if (q.includes("meeting") || q.includes("transcript") || q.includes("last call") || q.includes("talked about")) {
+    // NULLS LAST + filter — legacy Source v2 `source_type='transcript'` rows
+    // with NULL source_date would otherwise bubble to the top of a DESC sort
+    // (Postgres DESC defaults to NULLS FIRST) and fool Keys into reporting
+    // February titles as "the latest transcripts."
     const { data } = await supabase
       .from("dx_transcripts")
-      .select("source_title, source_date, participants")
-      .order("source_date", { ascending: false })
+      .select("source_title, source_date, source_type, participants")
+      .not("source_date", "is", null)
+      .order("source_date", { ascending: false, nullsFirst: false })
       .limit(5);
 
     if (data?.length) {
@@ -598,10 +603,11 @@ async function dispatchAgentCommand(
   chatId: number,
 ): Promise<string> {
   // Milli URL ingest — intent="ingest" routes here regardless of query/add shape.
+  // Writes a stub to 00-inbox/; triage runs at 06:45 / 19:45 (or on-demand).
   if (target === "milli" && intent === "ingest") {
     try {
-      const { url, title, kind, saved_to } = await runMilliIngest(question);
-      return `Milli ingested ${kind === "video" ? "video" : "link"}: **${title}**\n→ ${saved_to}\n\n_${url}_`;
+      const { url, kind, filename } = await runMilliIngest(question);
+      return `Milli queued ${kind === "video" ? "video" : kind === "claude_chat" ? "chat" : "link"} for triage.\n→ _${filename}_\n\nShelved on the next tick.\n\n_${url}_`;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return `Milli ingest failed: ${msg}`;
@@ -697,7 +703,7 @@ async function dispatchAgentCommand(
     case "clark":
       return `${target[0].toUpperCase() + target.slice(1)} doesn't have an on-demand query mode yet. Logged for the next cron run.`;
     case "milli":
-      return "Milli handles URL ingest (drop a link) but doesn't have a query mode yet. Logged for the next cron run.";
+      return "Milli handles URL ingest (drop a link — she queues it for the next triage tick). No query mode yet. Logged.";
     default:
       return "No target agent identified. Logged as a generic command.";
   }

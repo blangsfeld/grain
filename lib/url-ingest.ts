@@ -30,7 +30,7 @@ export function detectUrlType(url: string): UrlType {
 
 // ─── Content fetchers ───────────────────────────
 
-async function fetchClaudeChat(url: string): Promise<{ title: string; text: string }> {
+export async function fetchClaudeChat(url: string): Promise<{ title: string; text: string }> {
   // Claude.ai shared chats render as HTML with the conversation embedded
   const res = await fetch(url, {
     headers: { "User-Agent": "Grain/1.0" },
@@ -68,7 +68,7 @@ async function fetchClaudeChat(url: string): Promise<{ title: string; text: stri
   return { title, text: cleaned };
 }
 
-async function fetchArticle(url: string): Promise<{ title: string; text: string }> {
+export async function fetchArticle(url: string): Promise<{ title: string; text: string }> {
   const res = await fetch(url, {
     headers: { "User-Agent": "Grain/1.0" },
   });
