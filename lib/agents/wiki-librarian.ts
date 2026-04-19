@@ -24,6 +24,8 @@ const MODEL = "claude-haiku-4-5-20251001";
 const VAULT_ROOT = join(process.env.HOME || "", "Documents/Obsidian/Studio");
 const WIKI_ROOT = join(VAULT_ROOT, "60-reference/wiki");
 const INBOX = join(VAULT_ROOT, "00-inbox");
+const REVIEW = join(INBOX, "_review");
+const REVIEW_BACKLOG_THRESHOLD = 10;
 
 // ── Fact gathering (reused from v0.1, condensed) ───
 
@@ -31,6 +33,7 @@ interface WikiFacts {
   total_pages: number;
   page_counts: Record<string, number>;
   inbox_items: string[];
+  review_items: string[];
   broken_links: Array<{ from: string; target: string }>;
   missing_frontmatter: Array<{ page: string; missing: string[] }>;
   index_mismatches: { in_index_not_disk: string[]; on_disk_not_indexed: string[] };
@@ -56,7 +59,7 @@ function parseFm(content: string): Record<string, string | string[] | boolean | 
 
 function gatherFacts(): WikiFacts {
   if (!existsSync(WIKI_ROOT)) {
-    return { total_pages: 0, page_counts: {}, inbox_items: [], broken_links: [], missing_frontmatter: [], index_mismatches: { in_index_not_disk: [], on_disk_not_indexed: [] }, orphans: [] };
+    return { total_pages: 0, page_counts: {}, inbox_items: [], review_items: [], broken_links: [], missing_frontmatter: [], index_mismatches: { in_index_not_disk: [], on_disk_not_indexed: [] }, orphans: [] };
   }
 
   // Walk wiki tree
@@ -80,10 +83,16 @@ function gatherFacts(): WikiFacts {
   const page_counts: Record<string, number> = {};
   for (const p of pages) page_counts[p.category || "(root)"] = (page_counts[p.category || "(root)"] ?? 0) + 1;
 
-  // Inbox
+  // Inbox (working queue — top level only)
   let inbox_items: string[] = [];
   if (existsSync(INBOX)) {
     try { inbox_items = readdirSync(INBOX).filter((f) => f.endsWith(".md") && f !== "README.md"); } catch {}
+  }
+
+  // Review backlog (raw notes awaiting Phase B synthesis)
+  let review_items: string[] = [];
+  if (existsSync(REVIEW)) {
+    try { review_items = readdirSync(REVIEW).filter((f) => f.endsWith(".md")); } catch {}
   }
 
   // Broken wikilinks (within wiki)
@@ -143,7 +152,7 @@ function gatherFacts(): WikiFacts {
   scanVault(VAULT_ROOT);
   const orphans = contentPages.filter((p) => (inbound.get(p.slug) ?? 0) === 0).map((p) => p.slug);
 
-  return { total_pages: pages.length, page_counts, inbox_items, broken_links: broken, missing_frontmatter: fm_issues, index_mismatches, orphans };
+  return { total_pages: pages.length, page_counts, inbox_items, review_items, broken_links: broken, missing_frontmatter: fm_issues, index_mismatches, orphans };
 }
 
 function existsVaultWide(slug: string): boolean {
@@ -183,9 +192,11 @@ A short inventory report (under 200 words):
 Librarian-tidy. Factual. Counts things. Not dramatic, not chatty. "4 items in inbox. 1 broken link. Shelves are otherwise tidy." That register.
 
 ## Severity
-- green: inbox ≤2, no broken links, no frontmatter issues
-- attention: inbox >2 or any broken links
+- green: inbox ≤2, review backlog <10, no broken links, no frontmatter issues
+- attention: inbox >2, review backlog ≥10, any broken links, or frontmatter issues
 - failure: wiki directory missing or major structural breakdown
+
+A review backlog ≥10 items means raw notes are accumulating without Phase B synthesis — flag it in the report body.
 
 ## Output
 Return strict JSON:
@@ -216,6 +227,9 @@ function buildContext(facts: WikiFacts, siblings: { guy: string | null; buddy: s
   lines.push("");
   lines.push(`Inbox (00-inbox/): ${facts.inbox_items.length} items`);
   if (facts.inbox_items.length > 0) lines.push(`  Files: ${facts.inbox_items.slice(0, 8).join(", ")}`);
+  lines.push("");
+  lines.push(`Review backlog (00-inbox/_review/): ${facts.review_items.length} items${facts.review_items.length >= REVIEW_BACKLOG_THRESHOLD ? ` — over threshold (${REVIEW_BACKLOG_THRESHOLD})` : ""}`);
+  if (facts.review_items.length > 0) lines.push(`  Files: ${facts.review_items.slice(0, 5).join(", ")}`);
   lines.push("");
   lines.push(`Broken wikilinks: ${facts.broken_links.length}`);
   for (const b of facts.broken_links.slice(0, 5)) lines.push(`  ${b.from} → [[${b.target}]]`);
@@ -253,7 +267,7 @@ export interface MilliReport {
   run_at: string;
   severity: AgentSeverity;
   markdown: string;
-  facts: { total_pages: number; inbox: number; broken_links: number; orphans: number };
+  facts: { total_pages: number; inbox: number; review: number; broken_links: number; orphans: number };
   had_siblings: { guy: boolean; buddy: boolean };
 }
 
@@ -280,8 +294,13 @@ export async function runAndWriteWikiLibrarian(): Promise<{ output_id: string; r
     severity = parsed.severity;
     markdown = parsed.markdown;
   } else {
-    severity = facts.inbox_items.length > 2 || facts.broken_links.length > 0 ? "attention" : "green";
-    markdown = `# ${PERSONA} — wiki inventory\n\n_Reasoning failed. ${facts.total_pages} pages, ${facts.inbox_items.length} inbox, ${facts.broken_links.length} broken links._`;
+    severity =
+      facts.inbox_items.length > 2 ||
+      facts.review_items.length >= REVIEW_BACKLOG_THRESHOLD ||
+      facts.broken_links.length > 0
+        ? "attention"
+        : "green";
+    markdown = `# ${PERSONA} — wiki inventory\n\n_Reasoning failed. ${facts.total_pages} pages, ${facts.inbox_items.length} inbox, ${facts.review_items.length} review, ${facts.broken_links.length} broken links._`;
   }
 
   if (!markdown.startsWith("---")) {
@@ -292,7 +311,7 @@ export async function runAndWriteWikiLibrarian(): Promise<{ output_id: string; r
     run_at,
     severity,
     markdown,
-    facts: { total_pages: facts.total_pages, inbox: facts.inbox_items.length, broken_links: facts.broken_links.length, orphans: facts.orphans.length },
+    facts: { total_pages: facts.total_pages, inbox: facts.inbox_items.length, review: facts.review_items.length, broken_links: facts.broken_links.length, orphans: facts.orphans.length },
     had_siblings: { guy: !!siblings.guy, buddy: !!siblings.buddy },
   };
 

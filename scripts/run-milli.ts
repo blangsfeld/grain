@@ -28,6 +28,11 @@ async function main() {
     const slug = d.slug ? ` → [[${d.slug}]]` : "";
     console.log(`  ${tag} ${d.inbox_file}${slug}${url}${reason}`);
   }
+  if (triage.rollup && (triage.rollup.months_rolled > 0 || triage.rollup.errors.length > 0)) {
+    console.log(
+      `  rollup: ${triage.rollup.months_rolled} month(s), ${triage.rollup.files_consolidated} stub(s) consolidated${triage.rollup.errors.length > 0 ? `, ${triage.rollup.errors.length} error(s)` : ""}`,
+    );
+  }
 
   console.log("");
   console.log("Milli lint...");
@@ -37,6 +42,7 @@ async function main() {
   console.log(`  severity: ${report.severity}`);
   console.log(`  pages: ${report.facts.total_pages}`);
   console.log(`  inbox: ${report.facts.inbox}`);
+  console.log(`  review: ${report.facts.review}`);
   console.log(`  broken_links: ${report.facts.broken_links}`);
   console.log(`  orphans: ${report.facts.orphans}`);
   console.log(`  siblings read: guy=${report.had_siblings.guy}, buddy=${report.had_siblings.buddy}`);

@@ -346,7 +346,10 @@ async function runMilliTriage(): Promise<string> {
     .slice(0, 5)
     .join(", ");
   const detail = slugs ? ` (${slugs})` : "";
-  return `scanned=${t.scanned} processed=${t.processed}${detail} review=${t.review} errors=${t.errors}`;
+  const rollupNote = t.rollup && t.rollup.months_rolled > 0
+    ? ` · rolled ${t.rollup.months_rolled}mo/${t.rollup.files_consolidated} stubs`
+    : "";
+  return `scanned=${t.scanned} processed=${t.processed}${detail} review=${t.review} errors=${t.errors}${rollupNote}`;
 }
 
 // ── Phase 6b: Milli reflection (daily) ────

@@ -21,6 +21,7 @@ import {
   mkdirSync,
   renameSync,
   appendFileSync,
+  unlinkSync,
 } from "fs";
 import { join } from "path";
 import { homedir } from "os";
@@ -63,6 +64,13 @@ export interface TriageSummary {
   skipped: number;
   errors: number;
   details: TriageResult[];
+  rollup?: RollupSummary;
+}
+
+export interface RollupSummary {
+  months_rolled: number;
+  files_consolidated: number;
+  errors: string[];
 }
 
 // ── Frontmatter + URL utilities ───────────
@@ -559,6 +567,122 @@ function extractFirstHeading(body: string): string | null {
   return m?.[1]?.trim() ?? null;
 }
 
+// ── Monthly archive rollup ───────────
+// Every tick, consolidate fully-elapsed months of _archive/*.md into a
+// single _archive/YYYY-MM.md index file, then delete the individual stubs.
+// Keeps the audit trail searchable while bounding disk growth.
+// Idempotent — never touches the current month, never re-rolls an existing
+// rollup file.
+
+interface ArchivedStub {
+  filename: string;
+  processed_date: string | null;
+  wiki_slug: string | null;
+}
+
+function readArchivedStub(filename: string): ArchivedStub | null {
+  const full = join(ARCHIVE, filename);
+  try {
+    const content = readFileSync(full, "utf-8");
+    const { fm, body } = parseFm(content);
+    const processed_date =
+      (typeof fm.processed_date === "string" && fm.processed_date) ||
+      (typeof fm.ingested === "string" && fm.ingested) ||
+      null;
+    // Prefer explicit wiki_page frontmatter; fall back to scanning body for
+    // legacy "processed to wiki: [[slug]]" note.
+    let wiki_slug: string | null =
+      typeof fm.wiki_page === "string" && fm.wiki_page ? fm.wiki_page : null;
+    if (!wiki_slug) {
+      const m = body.match(/\[\[([a-z0-9-]+)\]\]/);
+      if (m) wiki_slug = m[1];
+    }
+    return { filename, processed_date, wiki_slug };
+  } catch {
+    return null;
+  }
+}
+
+function monthKeyOf(iso: string | null): string | null {
+  if (!iso || iso.length < 7) return null;
+  const key = iso.slice(0, 7);
+  return /^\d{4}-\d{2}$/.test(key) ? key : null;
+}
+
+function currentMonthKey(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+export function rollupArchive(): RollupSummary {
+  const summary: RollupSummary = { months_rolled: 0, files_consolidated: 0, errors: [] };
+  if (!existsSync(ARCHIVE)) return summary;
+
+  const currentMonth = currentMonthKey();
+  const entries = readdirSync(ARCHIVE, { withFileTypes: true });
+
+  // Gather stubs (non-rollup .md files) and group by month
+  const byMonth = new Map<string, ArchivedStub[]>();
+  for (const e of entries) {
+    if (!e.isFile() || !e.name.endsWith(".md")) continue;
+    // Skip existing rollup files (YYYY-MM.md shape)
+    if (/^\d{4}-\d{2}\.md$/.test(e.name)) continue;
+    const stub = readArchivedStub(e.name);
+    if (!stub) continue;
+    const mk = monthKeyOf(stub.processed_date);
+    if (!mk) continue;
+    if (mk === currentMonth) continue; // never roll the current month
+    if (!byMonth.has(mk)) byMonth.set(mk, []);
+    byMonth.get(mk)!.push(stub);
+  }
+
+  for (const [mk, stubs] of byMonth) {
+    try {
+      const rollupPath = join(ARCHIVE, `${mk}.md`);
+      const existing = existsSync(rollupPath) ? readFileSync(rollupPath, "utf-8") : null;
+
+      // Build new rollup body — merge with existing if present
+      stubs.sort((a, b) => (a.processed_date ?? "").localeCompare(b.processed_date ?? ""));
+
+      const header = existing
+        ? existing.replace(/\n*$/, "") + "\n"
+        : [
+            "---",
+            "type: archive-rollup",
+            `month: '${mk}'`,
+            "---",
+            "",
+            `# Inbox Archive — ${mk}`,
+            "",
+          ].join("\n");
+
+      const lines: string[] = [];
+      for (const s of stubs) {
+        const date = s.processed_date ?? "(undated)";
+        const slugLink = s.wiki_slug ? `[[${s.wiki_slug}]]` : "(no wiki page recorded)";
+        lines.push(`- ${date} ${slugLink} ← ${s.filename}`);
+      }
+
+      writeFileSync(rollupPath, header + lines.join("\n") + "\n");
+
+      // Delete the individual stubs
+      for (const s of stubs) {
+        try {
+          unlinkSync(join(ARCHIVE, s.filename));
+        } catch (err) {
+          summary.errors.push(`unlink ${s.filename}: ${err instanceof Error ? err.message : err}`);
+        }
+      }
+
+      summary.months_rolled++;
+      summary.files_consolidated += stubs.length;
+    } catch (err) {
+      summary.errors.push(`rollup ${mk}: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  return summary;
+}
+
 // ── Public entrypoint ───────────
 
 export async function processInbox(): Promise<TriageSummary> {
@@ -585,12 +709,15 @@ export async function processInbox(): Promise<TriageSummary> {
 
   appendLog(details);
 
+  // Consolidate prior-month archives into monthly rollup files.
+  const rollup = rollupArchive();
+
   const processed = details.filter((d) => d.status === "processed").length;
   const review = details.filter((d) => d.status === "needs_review").length;
   const skipped = details.filter((d) => d.status === "skipped").length;
   const errors = details.filter((d) => d.status === "error").length;
 
-  return { scanned: files.length, processed, review, skipped, errors, details };
+  return { scanned: files.length, processed, review, skipped, errors, details, rollup };
 }
 
 // ── Stub writer (Telegram → inbox) ───────────
