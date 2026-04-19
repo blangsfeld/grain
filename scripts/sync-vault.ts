@@ -14,6 +14,7 @@ loadDotenv({ path: ".env" });
 import { createClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
+import { materializeHeartbeat } from "@/lib/heartbeat-render";
 
 const VAULT = join(process.env.HOME || "", "Documents/Obsidian/Studio");
 const supabase = createClient(
@@ -116,6 +117,17 @@ async function syncBootContext() {
   if (content) await upsertSnapshot("boot_context", content);
 }
 
+// ── Heartbeat → vault ──────────────────────────────
+// Render the instrument panel alongside snapshot sync. /boot reads this.
+async function syncHeartbeat() {
+  const res = await materializeHeartbeat();
+  if (res.ok) {
+    console.log(`  ✓ heartbeat.md (${res.pulses} pulses, ${res.anomalies} anomalies)`);
+  } else {
+    console.log(`  ⚠ heartbeat: ${res.reason ?? "failed"}`);
+  }
+}
+
 // ── Main ───────────────────────────────────────────
 async function main() {
   console.log("Syncing vault → Supabase...");
@@ -127,6 +139,7 @@ async function main() {
     syncRecentDecisions(),
     syncBootContext(),
   ]);
+  await syncHeartbeat();
   console.log("Done.");
 }
 

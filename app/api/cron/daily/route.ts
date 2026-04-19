@@ -11,6 +11,7 @@ import { buildBriefingPrompt } from "@/lib/briefing-prompts";
 import { deliverBriefingEmail, archiveBriefingToVault } from "@/lib/briefing-deliver";
 import { getAnthropicClient } from "@/lib/anthropic";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { beat } from "@/lib/heartbeat";
 
 export const maxDuration = 300;
 
@@ -86,6 +87,20 @@ export async function GET(req: NextRequest) {
       briefingResult = { error: briefingErr instanceof Error ? briefingErr.message : "Unknown" };
     }
 
+    // Pulse — mode-aware cadence (monday_exec is weekly, daily is Tue-Fri).
+    const isMonday = new Date().getDay() === 1;
+    const br = briefingResult as unknown as { error?: string; mode?: string; events?: number } | null;
+    const briefingErrored = !!br && "error" in br && !!br.error;
+    await beat({
+      source: isMonday ? "cron.monday-exec-briefing" : "cron.daily-briefing",
+      status: briefingErrored ? "failure" : "ok",
+      summary: briefingErrored
+        ? String(br!.error).slice(0, 200)
+        : `mode=${br?.mode ?? "?"} events=${br?.events ?? 0}`,
+      cadenceHours: isMonday ? 175 : 30,
+      metadata: br as unknown as Record<string, unknown>,
+    });
+
     return NextResponse.json({
       success: true,
       date: today,
@@ -94,6 +109,12 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    await beat({
+      source: "cron.daily-briefing",
+      status: "failure",
+      summary: message.slice(0, 200),
+      cadenceHours: 30,
+    });
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

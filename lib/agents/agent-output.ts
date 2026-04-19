@@ -5,8 +5,28 @@
  */
 
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { beat, type HeartbeatStatus } from "@/lib/heartbeat";
 
 export type AgentSeverity = "green" | "attention" | "failure";
+
+// Expected cadence per agent (hours). If no fresh pulse within this window,
+// the heartbeat materializer flags stale. Derived from vercel.json schedules
+// with a safety margin (~25% slack).
+const AGENT_CADENCE_HOURS: Record<string, number> = {
+  "grain-steward": 30,       // daily — Vercel 12:53 UTC
+  "ea": 30,                  // daily — Vercel 13:07 UTC
+  "security-steward": 30,    // daily — Vercel 13:23 UTC
+  "wiki-librarian": 18,      // twice daily — local orchestrator 06:45/19:45
+  "what-if": 200,            // weekly Mon — Vercel 14:37 UTC
+  "columnist": 200,          // weekly Wed — Vercel 14:47 UTC
+  "notion-steward": 200,     // weekly Mon — Vercel 14:27 UTC
+  "wrap-steward": 0,         // ad-hoc, no schedule (0 = unknown)
+};
+
+function severityToHeartbeat(sev: AgentSeverity): HeartbeatStatus {
+  if (sev === "green") return "ok";
+  return sev; // "attention" | "failure"
+}
 
 export interface AgentOutput {
   agent_id: string;
@@ -31,7 +51,36 @@ export async function writeAgentOutput(out: AgentOutput): Promise<{ id: string }
     .single();
 
   if (error) throw new Error(`agent_outputs insert failed: ${error.message}`);
+
+  // Pulse — non-fatal. Absence of a fresh pulse tells us the agent didn't run.
+  const cadence = AGENT_CADENCE_HOURS[out.agent_id];
+  await beat({
+    source: `agent.${out.agent_id}`,
+    status: severityToHeartbeat(out.severity),
+    summary: firstBodyLine(out.markdown) ?? `severity=${out.severity}`,
+    cadenceHours: cadence && cadence > 0 ? cadence : undefined,
+    metadata: { output_id: data.id, severity: out.severity },
+  });
+
   return { id: data.id as string };
+}
+
+/**
+ * Pull the first real content line out of an agent's markdown — skip
+ * frontmatter, headings, and blank lines. Used for heartbeat summaries.
+ */
+function firstBodyLine(markdown: string): string | null {
+  // Strip leading frontmatter block
+  const body = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+  for (const raw of body.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith("#")) continue;        // headings
+    if (line.startsWith("---")) continue;      // rules / delimiters
+    if (line.startsWith("```")) continue;      // code fences
+    return line.slice(0, 140);
+  }
+  return null;
 }
 
 /**

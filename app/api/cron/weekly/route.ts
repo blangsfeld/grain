@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateWeeklyDigest } from "@/lib/weekly-digest";
 import { refreshCompanyPages } from "@/lib/company-pages";
 import { sendEmail } from "@/lib/resend";
+import { beat } from "@/lib/heartbeat";
 
 export const maxDuration = 300;
 
@@ -60,6 +61,23 @@ export async function GET(req: NextRequest) {
       console.error("Company page refresh failed:", cpErr instanceof Error ? cpErr.message : cpErr);
     }
 
+    await beat({
+      source: "cron.weekly-digest",
+      status: "ok",
+      summary: `meetings=${result.intel.meeting_count} atoms=${result.intel.atom_count}`,
+      cadenceHours: 175,
+      metadata: { week_start: weekStart, week_end: weekEnd, tokens: result.tokens },
+    });
+
+    if (companyPages) {
+      await beat({
+        source: "cron.company-pages",
+        status: "ok",
+        summary: `${companyPages.filter((p) => p.updated).length}/${companyPages.length} updated`,
+        cadenceHours: 175,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       week_start: weekStart,
@@ -79,6 +97,12 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    await beat({
+      source: "cron.weekly-digest",
+      status: "failure",
+      summary: message.slice(0, 200),
+      cadenceHours: 175,
+    });
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

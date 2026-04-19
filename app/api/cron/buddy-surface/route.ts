@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runBuddyCloseSurface } from "@/lib/agents/buddy-close";
 import { runBuddyPromoteSurface } from "@/lib/agents/buddy-promote";
 import { sendTelegramReply } from "@/lib/agents/telegram-desk";
+import { beat } from "@/lib/heartbeat";
 
 export const maxDuration = 120;
 
@@ -77,6 +78,13 @@ export async function GET(req: NextRequest) {
   }
 
   const ok = !report.close.error && !report.promote.error;
+  await beat({
+    source: "cron.buddy-surface",
+    status: ok ? "ok" : "failure",
+    summary: `close=${report.close.count} promote=${report.promote.count}${ok ? "" : " (errors)"}`,
+    cadenceHours: 175,
+    metadata: report as unknown as Record<string, unknown>,
+  });
   return NextResponse.json(
     { ok, ...report },
     { status: ok ? 200 : 500 },

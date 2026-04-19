@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestFromGranola } from "@/lib/granola-ingest";
 import { exportDailyHighlightsToVault } from "@/lib/vault-export";
+import { beat } from "@/lib/heartbeat";
 
 export const maxDuration = 300;
 
@@ -39,6 +40,15 @@ export async function GET(req: NextRequest) {
       return null;
     });
 
+    const summary = `${(result as unknown as { new_meetings?: number }).new_meetings ?? "?"} new meetings`;
+    await beat({
+      source: "cron.granola-ingest",
+      status: "ok",
+      summary,
+      cadenceHours: 26, // daily with slack
+      metadata: result as unknown as Record<string, unknown>,
+    });
+
     return NextResponse.json({
       success: true,
       ...result,
@@ -47,6 +57,12 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[ingest/granola] GET failed:", message);
+    await beat({
+      source: "cron.granola-ingest",
+      status: "failure",
+      summary: message.slice(0, 200),
+      cadenceHours: 26,
+    });
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

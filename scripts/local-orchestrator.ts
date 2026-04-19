@@ -28,6 +28,22 @@ import { archiveBriefingToVault } from "@/lib/briefing-deliver";
 import { generateWeeklyDigest } from "@/lib/weekly-digest";
 import { refreshCompanyPages } from "@/lib/company-pages";
 import { runAndWriteWikiLibrarian } from "@/lib/agents/wiki-librarian";
+import { processInbox } from "@/lib/agents/wiki-triage";
+import { beat } from "@/lib/heartbeat";
+import { materializeHeartbeat } from "@/lib/heartbeat-render";
+
+// Expected cadence per orchestrator phase (hours). Orchestrator fires at
+// 06:45 + 19:45 local, so 18h slack before stale.
+const PHASE_CADENCE_HOURS: Record<string, number> = {
+  meetings: 18,
+  briefings: 18,
+  "vault-snapshots": 18,
+  "weekly-digest": 200,   // Mondays only
+  "company-pages": 200,   // Mondays only
+  "milli-triage": 18,
+  milli: 18,
+  "heartbeat-sync": 18,
+};
 
 const VAULT_ROOT = join(homedir(), "Documents/Obsidian/Studio");
 const MEETINGS_DIR = join(VAULT_ROOT, "50-meetings");
@@ -59,11 +75,29 @@ async function phase(name: string, fn: () => Promise<string>): Promise<PhaseRepo
     const summary = await fn();
     const ms = Date.now() - start;
     console.log(`[${name}] OK (${ms}ms) — ${summary}`);
+    // Mark as 'attention' if the phase ran pathologically long (>10 min for normal,
+    // >30 min for weekly phases). Catches the 98-min meetings hang.
+    const slowThreshold = PHASE_CADENCE_HOURS[name] && PHASE_CADENCE_HOURS[name] > 50 ? 30 * 60_000 : 10 * 60_000;
+    const status = ms > slowThreshold ? "attention" : "ok";
+    await beat({
+      source: `orchestrator.${name}`,
+      status,
+      summary: status === "attention" ? `${summary} (slow: ${Math.round(ms / 1000)}s)` : summary,
+      cadenceHours: PHASE_CADENCE_HOURS[name],
+      metadata: { wall_ms: ms },
+    });
     return { phase: name, ok: true, summary, ms };
   } catch (err) {
     const ms = Date.now() - start;
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[${name}] FAIL (${ms}ms) — ${msg}`);
+    await beat({
+      source: `orchestrator.${name}`,
+      status: "failure",
+      summary: msg.slice(0, 200),
+      cadenceHours: PHASE_CADENCE_HOURS[name],
+      metadata: { wall_ms: ms },
+    });
     return { phase: name, ok: false, summary: msg, ms };
   }
 }
@@ -74,9 +108,24 @@ function daysAgo(n: number): string {
 
 // ── Phase 1: Meeting highlights (14-day self-heal) ────
 
+const PER_DAY_TIMEOUT_MS = 90_000; // 90s per day — stops a single hung fetch from
+                                    // stalling the whole 14-day loop (the 2026-04-18
+                                    // 98-minute hang that prompted heartbeat).
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 async function syncMeetingHighlights(): Promise<string> {
   const written: string[] = [];
   const skipped: string[] = [];
+  const timedOut: string[] = [];
 
   for (let i = 1; i <= SELF_HEAL_DAYS; i++) {
     const date = daysAgo(i);
@@ -85,11 +134,21 @@ async function syncMeetingHighlights(): Promise<string> {
       skipped.push(date);
       continue;
     }
-    const path = await exportDailyHighlightsToVault(date);
-    if (path) written.push(date);
+    try {
+      const path = await withTimeout(
+        exportDailyHighlightsToVault(date),
+        PER_DAY_TIMEOUT_MS,
+        `exportDailyHighlightsToVault(${date})`,
+      );
+      if (path) written.push(date);
+    } catch (err) {
+      timedOut.push(date);
+      console.error(`  [meetings] ${date} skipped: ${err instanceof Error ? err.message : err}`);
+    }
   }
 
-  return `wrote ${written.length} (${written.join(", ") || "none"}), skipped ${skipped.length} existing`;
+  const timedOutNote = timedOut.length > 0 ? `, timed out ${timedOut.length} (${timedOut.join(", ")})` : "";
+  return `wrote ${written.length} (${written.join(", ") || "none"}), skipped ${skipped.length} existing${timedOutNote}`;
 }
 
 // ── Phase 2: Briefings (pull unseen from Supabase) ────
@@ -277,11 +336,35 @@ async function syncCompanyPages(): Promise<string> {
   return `${updated.length}/${pages.length} updated: ${updated.map((p) => p.name).join(", ") || "none"}`;
 }
 
-// ── Phase 6: Milli reflection (daily) ────
+// ── Phase 6a: Milli triage (process 00-inbox) ────
+
+async function runMilliTriage(): Promise<string> {
+  const t = await processInbox();
+  const slugs = t.details
+    .filter((d) => d.status === "processed" && d.slug)
+    .map((d) => d.slug)
+    .slice(0, 5)
+    .join(", ");
+  const detail = slugs ? ` (${slugs})` : "";
+  return `scanned=${t.scanned} processed=${t.processed}${detail} review=${t.review} errors=${t.errors}`;
+}
+
+// ── Phase 6b: Milli reflection (daily) ────
 
 async function runMilli(): Promise<string> {
   const { output_id, report } = await runAndWriteWikiLibrarian();
   return `severity=${report.severity} pages=${report.facts.total_pages} inbox=${report.facts.inbox} broken=${report.facts.broken_links} orphans=${report.facts.orphans} output=${output_id}`;
+}
+
+// ── Phase 7: Heartbeat → vault ────
+// Render 70-agents/heartbeat.md from the pulse ledger so the vault shows
+// what's alive, what's stale, and what failed. Runs last so it reflects
+// this tick's phase pulses.
+
+async function runHeartbeatSync(): Promise<string> {
+  const res = await materializeHeartbeat();
+  if (!res.ok) throw new Error(res.reason ?? "materialize failed");
+  return `${res.pulses} pulses, ${res.anomalies} anomalies`;
 }
 
 // ── Main ────
@@ -306,7 +389,9 @@ async function main() {
     reports.push(await phase("company-pages", syncCompanyPages));
   }
 
+  reports.push(await phase("milli-triage", runMilliTriage));
   reports.push(await phase("milli", runMilli));
+  reports.push(await phase("heartbeat-sync", runHeartbeatSync));
 
   const failed = reports.filter((r) => !r.ok);
   const total = reports.reduce((s, r) => s + r.ms, 0);

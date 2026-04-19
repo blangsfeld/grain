@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { beat } from "@/lib/heartbeat";
 
 export const maxDuration = 300;
 
@@ -50,9 +51,29 @@ export async function GET(req: NextRequest) {
       writeFileSync(HEALTH_PATH, markdown, "utf-8");
     }
 
+    const issueCount =
+      report.stale_tensions.length +
+      report.overdue_loops.length +
+      report.dormant_people.length +
+      report.orphaned_pages.length +
+      report.unresolved_tentative_decisions.length +
+      report.malformed_managed_files.length;
+    await beat({
+      source: "cron.weekly-lint",
+      status: issueCount > 0 ? "attention" : "ok",
+      summary: `${issueCount} issues flagged`,
+      cadenceHours: 175,
+    });
+
     return NextResponse.json({ ok: true, report, vault_written: vaultAvailable() });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    await beat({
+      source: "cron.weekly-lint",
+      status: "failure",
+      summary: msg.slice(0, 200),
+      cadenceHours: 175,
+    });
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

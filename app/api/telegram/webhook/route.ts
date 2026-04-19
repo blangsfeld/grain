@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { handleTelegramUpdate, type TelegramUpdate } from "@/lib/agents/telegram-desk";
+import { beat } from "@/lib/heartbeat";
 
 export const maxDuration = 30;
 
@@ -35,10 +36,21 @@ export async function POST(req: NextRequest) {
   // Acknowledge fast; errors here shouldn't cause Telegram to retry indefinitely
   try {
     const result = await handleTelegramUpdate(update);
+    await beat({
+      source: "telegram.desk",
+      status: result.ok ? "ok" : "attention",
+      summary: result.ok ? "message handled" : (result.reason ?? "non-ok result"),
+      // No cadence — Telegram is event-driven. "Last heard from Keys" is the signal.
+    });
     return NextResponse.json(result);
   } catch (err) {
     console.error("telegram webhook error:", err);
     const msg = err instanceof Error ? err.message : String(err);
+    await beat({
+      source: "telegram.desk",
+      status: "failure",
+      summary: msg.slice(0, 200),
+    });
     // Still return 200 so Telegram doesn't retry a failing message loop
     return NextResponse.json({ ok: false, error: msg });
   }
