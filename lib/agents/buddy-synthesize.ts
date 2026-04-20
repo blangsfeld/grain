@@ -19,6 +19,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { getAnthropicClient } from "@/lib/anthropic";
 import { readLatestAgentOutput } from "@/lib/agents/agent-output";
 import { readPersonalCommitments } from "@/lib/agents/ea";
+import { beat } from "@/lib/heartbeat";
 
 const MODEL = "claude-sonnet-4-5-20250929";
 
@@ -665,4 +666,217 @@ export function formatTaskDelivery(task: TaskOffer): string {
     lines.push(task.description);
   }
   return lines.join("\n");
+}
+
+// ── Persistence — per-chat synthesis context ───────
+
+/**
+ * Stash the synthesis as a pending menu for this chat. Most recent wins.
+ * Replies like "2", "#3", "task 1" resolve against this menu until a new
+ * synthesis supersedes it (or Ben explicitly resolves it).
+ */
+export async function storeSynthesisMenu(
+  chat_id: number,
+  synthesis: BuddySynthesis,
+): Promise<string> {
+  const supabase = getSupabaseAdmin();
+  // Close any open synthesis menu for this chat — latest wins.
+  await supabase
+    .from("buddy_pending_menus")
+    .update({ resolved_at: new Date().toISOString() })
+    .eq("chat_id", chat_id)
+    .eq("kind", "synthesis")
+    .is("resolved_at", null);
+
+  const { data, error } = await supabase
+    .from("buddy_pending_menus")
+    .insert({ chat_id, kind: "synthesis", items: synthesis })
+    .select("id")
+    .single();
+  if (error) throw new Error(`synthesis menu insert: ${error.message}`);
+  return data.id as string;
+}
+
+async function fetchLatestSynthesisMenu(
+  chat_id: number,
+): Promise<{ id: string; synthesis: BuddySynthesis } | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("buddy_pending_menus")
+    .select("id, items")
+    .eq("chat_id", chat_id)
+    .eq("kind", "synthesis")
+    .is("resolved_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`synthesis menu query: ${error.message}`);
+  if (!data) return null;
+  return { id: data.id as string, synthesis: data.items as BuddySynthesis };
+}
+
+// ── Daily surface entrypoint ───────────────────────
+
+export interface BuddySurfaceResult {
+  synthesis: BuddySynthesis;
+  menu_id: string;
+  message: string;
+}
+
+/**
+ * Run the synthesis, stash it as a pending menu for this chat, return the
+ * formatted briefing. Caller sends to Telegram — this function is
+ * transport-agnostic so the orchestrator can reuse it.
+ *
+ * Writes a heartbeat pulse on exit (non-fatal). Expected cadence: daily
+ * (30h slack window).
+ */
+export async function runBuddySurface(chat_id: number): Promise<BuddySurfaceResult> {
+  const synthesis = await runBuddySynthesis();
+  const menu_id = await storeSynthesisMenu(chat_id, synthesis);
+  const message = formatBriefing(synthesis);
+
+  // Pulse — absence of a fresh pulse means Buddy didn't surface today.
+  await beat({
+    source: "agent.ea.synthesis",
+    status: synthesis.voice_warnings.length > 0 ? "attention" : "ok",
+    summary:
+      synthesis.quiet_note ??
+      `${synthesis.attention.length} attention · ${synthesis.carried_forward.length} carried · ${synthesis.others_owe_you.length} owed · ${synthesis.patterns.length} patterns`,
+    cadenceHours: 30,
+    metadata: {
+      menu_id,
+      voice_warnings: synthesis.voice_warnings,
+      corpus_sizes: synthesis.corpus_sizes,
+      siblings_read: synthesis.siblings_read,
+    },
+  });
+
+  return { synthesis, menu_id, message };
+}
+
+// ── Reply resolution — "2", "#3", "task 1" ─────────
+
+export interface SynthesisReply {
+  kind: "item" | "task" | "none";
+  /** 1-indexed reference Ben used */
+  index: number | null;
+  /** Resolved body to send back */
+  message: string;
+  /** Which section the reference hit (for logging / analytics) */
+  section: "attention" | "carried_forward" | "tasks_can_help_with" | null;
+}
+
+/**
+ * Parse a Telegram reply against the most recent synthesis menu for this
+ * chat. Returns kind="none" when the text doesn't reference the synthesis —
+ * caller should fall through to the main classifier in that case.
+ *
+ * Supported shapes (v1):
+ *   "2", "#2", " 2 "                       → attention[1]
+ *   "task 1", "help 2", "t1"               → tasks_can_help_with[0]
+ *   "carry 1", "watch 2", "c1"             → carried_forward[0]
+ */
+export async function resolveSynthesisReply(
+  chat_id: number,
+  text: string,
+): Promise<SynthesisReply> {
+  const none = (msg = ""): SynthesisReply => ({
+    kind: "none",
+    index: null,
+    message: msg,
+    section: null,
+  });
+
+  const trimmed = text.trim();
+  if (!trimmed) return none();
+
+  // Only look up the DB if the reply shape plausibly references the menu —
+  // avoids a round-trip on every message.
+  const patterns = [
+    { rx: /^#?\s*(\d+)$/, section: "attention" as const },
+    { rx: /^task\s*#?\s*(\d+)$/i, section: "tasks_can_help_with" as const },
+    { rx: /^help\s*#?\s*(\d+)$/i, section: "tasks_can_help_with" as const },
+    { rx: /^t\s*(\d+)$/i, section: "tasks_can_help_with" as const },
+    { rx: /^carry\s*#?\s*(\d+)$/i, section: "carried_forward" as const },
+    { rx: /^watch\s*#?\s*(\d+)$/i, section: "carried_forward" as const },
+    { rx: /^c\s*(\d+)$/i, section: "carried_forward" as const },
+  ];
+
+  let match: { index: number; section: SynthesisReply["section"] } | null = null;
+  for (const { rx, section } of patterns) {
+    const m = trimmed.match(rx);
+    if (m) {
+      const idx = parseInt(m[1], 10);
+      if (!isNaN(idx) && idx > 0) {
+        match = { index: idx, section };
+        break;
+      }
+    }
+  }
+  if (!match) return none();
+
+  const menu = await fetchLatestSynthesisMenu(chat_id);
+  if (!menu) {
+    return {
+      kind: "none",
+      index: match.index,
+      message: "No recent synthesis to reference. Wait for the next briefing or run `buddy surface` now.",
+      section: match.section,
+    };
+  }
+
+  const s = menu.synthesis;
+  if (match.section === "attention") {
+    const item = s.attention[match.index - 1];
+    if (!item) {
+      return {
+        kind: "none",
+        index: match.index,
+        message: `No attention thread #${match.index} — today's briefing had ${s.attention.length}.`,
+        section: "attention",
+      };
+    }
+    return {
+      kind: "item",
+      index: match.index,
+      message: formatItemFocus(item),
+      section: "attention",
+    };
+  }
+
+  if (match.section === "carried_forward") {
+    const item = s.carried_forward[match.index - 1];
+    if (!item) {
+      return {
+        kind: "none",
+        index: match.index,
+        message: `No carried-forward item #${match.index} — today's briefing had ${s.carried_forward.length}.`,
+        section: "carried_forward",
+      };
+    }
+    return {
+      kind: "item",
+      index: match.index,
+      message: formatItemFocus(item),
+      section: "carried_forward",
+    };
+  }
+
+  // tasks_can_help_with
+  const task = s.tasks_can_help_with[match.index - 1];
+  if (!task) {
+    return {
+      kind: "none",
+      index: match.index,
+      message: `No task #${match.index} — today's briefing had ${s.tasks_can_help_with.length}.`,
+      section: "tasks_can_help_with",
+    };
+  }
+  return {
+    kind: "task",
+    index: match.index,
+    message: formatTaskDelivery(task),
+    section: "tasks_can_help_with",
+  };
 }

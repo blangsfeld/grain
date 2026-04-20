@@ -23,6 +23,10 @@ import {
   runBuddyCloseSurface,
   resolveCloseReply,
 } from "@/lib/agents/buddy-close";
+import {
+  runBuddySurface,
+  resolveSynthesisReply,
+} from "@/lib/agents/buddy-synthesize";
 import { runMilliIngest } from "@/lib/agents/wiki-librarian";
 import { runBruhQuery } from "@/lib/agents/what-if";
 
@@ -65,7 +69,9 @@ export type AgentIntent =
   | "promote_surface"
   | "promote_reply"
   | "close_surface"
-  | "close_reply";
+  | "close_reply"
+  | "synthesis_surface"
+  | "synthesis_reply";
 
 interface Classification {
   kind: CaptureKind;
@@ -102,7 +108,8 @@ const SYSTEM_PROMPT = `You are Keys, the Telegram front door for Ben Langsfeld's
      · "ingest" — a bare URL drop (with no other words or just "ingest this") → target_agent: "milli", intent: "ingest", question: the URL
      · "promote_surface" — "buddy promote" / "what should I promote" / "show me promotion candidates" / "surface new items for my list" → target_agent: "buddy", intent: "promote_surface", question: null
      · "close_surface" — "buddy cleanup" / "what's stale" / "clean up my list" / "close loop" → target_agent: "buddy", intent: "close_surface", question: null
-     · (promote/close replies like "promote 2,5" or "done 1 recur 2" are matched by regex before you see them — never emit "promote_reply" or "close_reply" yourself)
+     · "synthesis_surface" — "buddy surface" / "brief me" / "what should I be thinking about" / "morning read" / "what's rising" → target_agent: "buddy", intent: "synthesis_surface", question: null
+     · (promote/close/synthesis replies like "promote 2,5", "done 1 recur 2", bare "2" are matched by regex before you see them — never emit reply intents yourself)
      · Everything else that names an agent → intent: "query"
    - question: the actual task/question stripped of dispatch words ("ask Timi who..." → question: "Who...")
 
@@ -147,6 +154,8 @@ const VALID_INTENTS: AgentIntent[] = [
   "promote_reply",
   "close_surface",
   "close_reply",
+  "synthesis_surface",
+  "synthesis_reply",
 ];
 
 function parseClassification(raw: string): Classification | null {
@@ -647,6 +656,17 @@ async function dispatchAgentCommand(
     }
   }
 
+  // Buddy synthesis surface — the chief-of-staff briefing.
+  if (target === "buddy" && intent === "synthesis_surface") {
+    try {
+      const { message } = await runBuddySurface(chatId);
+      return message;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Buddy synthesis failed: ${msg}`;
+    }
+  }
+
   // Buddy cleanup — surface stale items from Notion kept list.
   if (target === "buddy" && intent === "close_surface") {
     try {
@@ -736,6 +756,33 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<{
   if (!text) {
     await sendTelegramReply(msg.chat.id, "_(empty message — nothing to capture)_", msg.message_id).catch(() => {});
     return { ok: false, reason: "empty text" };
+  }
+
+  // Synthesis reply short-circuit — "2", "#3", "task 1", "watch 2".
+  // These reference the most recent Buddy briefing for this chat and don't
+  // match any other regex. Checking first keeps the hot path fast; misses
+  // return kind="none" and fall through to the normal pipeline.
+  try {
+    const synReply = await resolveSynthesisReply(msg.chat.id, text);
+    if (synReply.kind === "item" || synReply.kind === "task") {
+      const classification: Classification = {
+        kind: "command",
+        destination: null,
+        target_agent: "buddy",
+        intent: "synthesis_reply",
+        question: text,
+        reason: `synthesis ${synReply.section}[${synReply.index}]`,
+        reply: synReply.message,
+      };
+      const { id } = await storeCapture(update, classification);
+      await sendTelegramReply(msg.chat.id, synReply.message, msg.message_id).catch((err) =>
+        console.error("telegram reply failed:", err),
+      );
+      return { ok: true, capture_id: id };
+    }
+  } catch (err) {
+    console.error("synthesis reply resolution failed:", err);
+    // fall through to normal pipeline
   }
 
   // Regex short-circuit for known reply shapes (promote/close). Saves a

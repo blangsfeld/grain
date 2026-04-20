@@ -29,6 +29,8 @@ import { generateWeeklyDigest } from "@/lib/weekly-digest";
 import { refreshCompanyPages } from "@/lib/company-pages";
 import { runAndWriteWikiLibrarian } from "@/lib/agents/wiki-librarian";
 import { processInbox } from "@/lib/agents/wiki-triage";
+import { runBuddySurface } from "@/lib/agents/buddy-synthesize";
+import { sendTelegramReply } from "@/lib/agents/telegram-desk";
 import { beat } from "@/lib/heartbeat";
 import { materializeHeartbeat } from "@/lib/heartbeat-render";
 
@@ -42,6 +44,7 @@ const PHASE_CADENCE_HOURS: Record<string, number> = {
   "company-pages": 200,   // Mondays only
   "milli-triage": 18,
   milli: 18,
+  "buddy-surface": 30,    // morning only — only runs in the AM tick
   "heartbeat-sync": 18,
 };
 
@@ -359,6 +362,47 @@ async function runMilli(): Promise<string> {
   return `severity=${report.severity} pages=${report.facts.total_pages} inbox=${report.facts.inbox} broken=${report.facts.broken_links} orphans=${report.facts.orphans} output=${output_id}`;
 }
 
+// ── Phase 6c: Buddy synthesis surface (morning only) ────
+// Runs once per day in the AM tick. Produces the sectioned chief-of-staff
+// briefing, stores the synthesis as a pending menu for Ben's chat so
+// Telegram replies ("2", "#3", "task 1") resolve against it, and sends the
+// briefing to Telegram. Skipped on the evening tick so Ben's phone isn't
+// pinged twice.
+
+async function runBuddySurfacePhase(): Promise<string> {
+  const chatIdRaw = process.env.TELEGRAM_BEN_CHAT_ID ?? process.env.TELEGRAM_ALLOWED_USER_ID;
+  if (!chatIdRaw) {
+    return "skipped — no TELEGRAM_BEN_CHAT_ID or TELEGRAM_ALLOWED_USER_ID env var";
+  }
+  const chat_id = parseInt(chatIdRaw.trim(), 10);
+  if (!chat_id || isNaN(chat_id)) {
+    return `skipped — invalid chat id "${chatIdRaw}"`;
+  }
+
+  const { synthesis, menu_id, message } = await runBuddySurface(chat_id);
+
+  // Telegram send is non-fatal — if it fails we still have the synthesis
+  // persisted and the heartbeat pulse, so Ben can pull it later with
+  // "buddy surface".
+  try {
+    await sendTelegramReply(chat_id, message);
+  } catch (err) {
+    console.error(`  [buddy-surface] telegram send failed: ${err instanceof Error ? err.message : err}`);
+  }
+
+  const parts = [
+    `${synthesis.attention.length} attention`,
+    `${synthesis.carried_forward.length} carried`,
+    `${synthesis.others_owe_you.length} owed`,
+    `${synthesis.patterns.length} patterns`,
+    `${synthesis.tasks_can_help_with.length} tasks`,
+  ];
+  if (synthesis.voice_warnings.length > 0) {
+    parts.push(`⚠ ${synthesis.voice_warnings.length} voice leak`);
+  }
+  return `${parts.join(" · ")} (menu ${menu_id.slice(0, 8)})`;
+}
+
 // ── Phase 7: Heartbeat → vault ────
 // Render 70-agents/heartbeat.md from the pulse ledger so the vault shows
 // what's alive, what's stale, and what failed. Runs last so it reflects
@@ -378,8 +422,13 @@ async function main() {
     process.exit(1);
   }
 
-  const isMonday = new Date().getDay() === 1;
-  console.log(`[orchestrator] run start ${new Date().toISOString()} (monday=${isMonday})`);
+  const now = new Date();
+  const isMonday = now.getDay() === 1;
+  // launchd fires at 06:45 and 19:45 local. Buddy's briefing goes to
+  // Telegram; firing on the evening tick would double-ping Ben's phone.
+  // Hour < 12 = AM tick. Works across timezones because launchd uses local.
+  const isMorning = now.getHours() < 12;
+  console.log(`[orchestrator] run start ${now.toISOString()} (monday=${isMonday}, morning=${isMorning})`);
 
   const reports: PhaseReport[] = [];
 
@@ -394,6 +443,11 @@ async function main() {
 
   reports.push(await phase("milli-triage", runMilliTriage));
   reports.push(await phase("milli", runMilli));
+
+  if (isMorning) {
+    reports.push(await phase("buddy-surface", runBuddySurfacePhase));
+  }
+
   reports.push(await phase("heartbeat-sync", runHeartbeatSync));
 
   const failed = reports.filter((r) => !r.ok);
