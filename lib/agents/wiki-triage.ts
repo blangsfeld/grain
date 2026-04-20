@@ -32,6 +32,7 @@ import {
   detectUrlType,
   type UrlType,
 } from "@/lib/url-ingest";
+import { fetchYouTubeTranscript } from "@/lib/fetch-youtube-transcript";
 
 const VAULT_ROOT = join(homedir(), "Documents/Obsidian/Studio");
 const WIKI_ROOT = join(VAULT_ROOT, "60-reference/wiki");
@@ -220,17 +221,42 @@ interface Classification {
   cross_links: string[];
 }
 
-const CLASSIFIER_SYSTEM = `You are Milli's triage classifier. Given a newly ingested source, extract a filing record for the wiki.
+const CLASSIFIER_SYSTEM = `You are Milli's triage classifier. Given a newly ingested source, call the file_source tool with a filing record for the wiki.
 
 Rules:
 - suggested_slug: kebab-case, <= 50 chars, based on the core subject (not the full title)
 - summary: 1-2 sentences in librarian register — factual, compressed, no hedging
 - key_claims: 3-7 substantive claims, techniques, or positions the source makes. Skip chrome (intro, outro, sign-offs)
 - tags: 2-6 lowercase kebab-case tags (topics, tools, domains)
-- cross_links: ONLY return slugs from the provided existing-slugs list that genuinely relate. Empty array if none apply. NEVER invent slugs
+- cross_links: ONLY return slugs from the provided existing-slugs list that genuinely relate. Empty array if none apply. NEVER invent slugs`;
 
-Return JSON only, matching:
-{"suggested_slug": "string", "summary": "string", "key_claims": ["..."], "tags": ["..."], "cross_links": ["..."]}`;
+const CLASSIFIER_TOOL = {
+  name: "file_source",
+  description: "File the source into the wiki with structured metadata.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      suggested_slug: { type: "string", description: "kebab-case, <= 50 chars" },
+      summary: { type: "string", description: "1-2 sentences, librarian register" },
+      key_claims: {
+        type: "array",
+        items: { type: "string" },
+        description: "3-7 substantive claims from the source",
+      },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description: "2-6 lowercase kebab-case tags",
+      },
+      cross_links: {
+        type: "array",
+        items: { type: "string" },
+        description: "Existing slugs from the provided list only. Empty if none apply.",
+      },
+    },
+    required: ["suggested_slug", "summary", "key_claims", "tags", "cross_links"],
+  },
+};
 
 async function classify(params: {
   title: string;
@@ -252,21 +278,24 @@ async function classify(params: {
     params.excerpt.slice(0, 6000),
     "---",
     "",
-    "Return JSON only.",
+    "Call file_source with the filing record.",
   ].join("\n");
 
   const response = await anthropic.messages.create({
     model: HAIKU,
-    max_tokens: 700,
+    max_tokens: 1200,
     system: CLASSIFIER_SYSTEM,
+    tools: [CLASSIFIER_TOOL],
+    tool_choice: { type: "tool", name: "file_source" },
     messages: [{ role: "user", content: userPrompt }],
   });
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
-  const match = text.replace(/```(?:json)?\s*|\s*```/g, "").match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("classifier returned no JSON");
+  const toolUse = response.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    throw new Error("classifier did not call file_source");
+  }
+  const parsed = toolUse.input as Partial<Classification>;
 
-  const parsed = JSON.parse(match[0]) as Partial<Classification>;
   return {
     suggested_slug: slugify(String(parsed.suggested_slug ?? params.title)),
     summary: String(parsed.summary ?? "").trim() || params.title,
@@ -482,10 +511,24 @@ async function processItem(filename: string, existingSlugs: Set<string>): Promis
       const meta = await fetchYouTubeMeta(url);
       title = meta.title;
       author = meta.author;
-      content = meta.description ?? "(no description returned by YouTube)";
-      contentLabel = "Description";
-      extraFm.transcript = "pending";
       if (meta.video_id) extraFm.video_id = meta.video_id;
+
+      // Phase B: attempt transcript fetch. If we get captions, they become
+      // the source-page body AND the classification excerpt — a transcript
+      // is substantially richer signal than the marketing description.
+      const transcript = await fetchYouTubeTranscript(url).catch(() => null);
+      if (transcript && transcript.text.length >= 200) {
+        content = transcript.text.slice(0, 80_000);
+        contentLabel = "Transcript";
+        extraFm.transcript = "present";
+        extraFm.transcript_language = transcript.language;
+        extraFm.transcript_duration_seconds = String(transcript.duration_seconds);
+        extraFm.transcript_segment_count = String(transcript.segment_count);
+      } else {
+        content = meta.description ?? "(no description returned by YouTube)";
+        contentLabel = "Description";
+        extraFm.transcript = "unavailable";
+      }
     } else if (urlType === "claude_chat") {
       const chat = await fetchClaudeChat(url);
       title = chat.title;
