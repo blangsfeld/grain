@@ -17,6 +17,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import {
   queryDatabase,
   updatePage,
+  getPage,
   getTitle,
   getSelect,
   getDate,
@@ -25,9 +26,18 @@ import {
   richTextProp,
 } from "@/lib/notion";
 import type { NotionPage } from "@/lib/notion";
+import type { PersonalCommitmentStatus } from "@/types/atoms";
 
-const NOTION_API = "https://api.notion.com/v1";
-const NOTION_VERSION = "2022-06-28";
+// Status values that should NOT surface in the stale sweep. Recurring items
+// are exempt by design; Evolved / Dormant / Not a thing are Ben's explicit
+// "park it, don't nag me" outcomes — carrying them back into close menus
+// would undo the signal the semantic reply flow just recorded.
+const STALE_SWEEP_EXEMPT: PersonalCommitmentStatus[] = [
+  "Recurring",
+  "Evolved",
+  "Dormant",
+  "Not a thing",
+];
 
 const STALENESS_DAYS = 14;
 const MENU_SIZE = 12;
@@ -63,9 +73,9 @@ export interface CloseSurfaceResult {
 export async function gatherStaleItems(): Promise<CloseMenuItem[]> {
   const cutoff = new Date(Date.now() - STALENESS_DAYS * 86_400_000).toISOString();
 
-  // Pull non-Done items; Recurring is filtered in code so this still works
-  // even if Ben hasn't added the "Recurring" select option yet (Notion's
-  // filter validates option names against the schema and rejects unknowns).
+  // Pull non-Done items; exempt statuses (Recurring + soft-close states) are
+  // filtered in code after the fetch so a filter referencing an unknown
+  // option name can't reject the whole query.
   const pages = await queryDatabase(personalDbId(), {
     filter: { property: "Status", select: { does_not_equal: "Done" } },
     sorts: [{ timestamp: "last_edited_time", direction: "ascending" }],
@@ -76,7 +86,7 @@ export async function gatherStaleItems(): Promise<CloseMenuItem[]> {
 
   for (const p of pages as NotionPage[]) {
     const status = getSelect(p, "Status");
-    if (status === "Recurring") continue;
+    if (status && STALE_SWEEP_EXEMPT.includes(status as PersonalCommitmentStatus)) continue;
 
     const lastEdited = p.last_edited_time;
     if (!lastEdited || lastEdited > cutoff) continue;
@@ -269,22 +279,6 @@ export function parseCloseReply(text: string): ParsedCloseReply | null {
 
 // ── Action application ─────────────────────────────
 
-async function fetchPage(page_id: string): Promise<NotionPage> {
-  const token = process.env.NOTION_API_KEY;
-  if (!token) throw new Error("NOTION_API_KEY missing");
-  const res = await fetch(`${NOTION_API}/pages/${page_id}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Notion-Version": NOTION_VERSION,
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Notion fetch page failed: ${res.status} ${body}`);
-  }
-  return res.json() as Promise<NotionPage>;
-}
-
 async function applyAction(
   page_id: string,
   action: CloseAction,
@@ -301,7 +295,7 @@ async function applyAction(
       // Append a "Kept YYYY-MM-DD" stamp to Notes (preserves existing notes)
       // and bumps Notion's last_edited_time so the item drops off the stale
       // window for another cycle.
-      const page = await fetchPage(page_id);
+      const page = await getPage(page_id);
       const existing = getRichText(page, "Notes");
       const stamp = `Kept ${new Date().toISOString().slice(0, 10)}`;
       const merged = existing ? `${existing}\n${stamp}` : stamp;

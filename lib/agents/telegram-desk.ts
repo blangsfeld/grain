@@ -27,6 +27,7 @@ import {
   runBuddySurface,
   resolveSynthesisReply,
 } from "@/lib/agents/buddy-synthesize";
+import { interpretSynthesisReply } from "@/lib/agents/buddy-evolve";
 import { runMilliIngest } from "@/lib/agents/wiki-librarian";
 import { runBruhQuery } from "@/lib/agents/what-if";
 
@@ -783,6 +784,33 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<{
   } catch (err) {
     console.error("synthesis reply resolution failed:", err);
     // fall through to normal pipeline
+  }
+
+  // Semantic reply interpreter — free-text replies like "that's done",
+  // "retire the gmail one", "bump 2 to tomorrow", "evolved 1 into 3".
+  // Runs a Haiku tool-use pass against the latest synthesis menu's
+  // kept_index. On miss, falls through cleanly to preClassify/classify.
+  try {
+    const interp = await interpretSynthesisReply(msg.chat.id, text);
+    if (interp.kind === "applied" || interp.kind === "clarify") {
+      const classification: Classification = {
+        kind: "command",
+        destination: null,
+        target_agent: "buddy",
+        intent: "synthesis_reply",
+        question: text,
+        reason: `semantic ${interp.kind} (${interp.applied.length} applied, ${interp.errors.length} errors)`,
+        reply: interp.message,
+      };
+      const { id } = await storeCapture(update, classification);
+      await sendTelegramReply(msg.chat.id, interp.message, msg.message_id).catch((err) =>
+        console.error("telegram reply failed:", err),
+      );
+      return { ok: true, capture_id: id };
+    }
+  } catch (err) {
+    console.error("semantic reply interpretation failed:", err);
+    // fall through
   }
 
   // Regex short-circuit for known reply shapes (promote/close). Saves a

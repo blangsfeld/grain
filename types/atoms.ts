@@ -67,6 +67,35 @@ export type CommitmentCategory =
   | "CLIP"
   | "Other";
 
+/**
+ * Status values for the Notion Personal Commitments DB (kept list).
+ * - Open / In Progress / Waiting / Done — the original lifecycle
+ * - Recurring — exempt from close sweeps
+ * - Evolved — superseded by another item (see Evolved To relation)
+ * - Dormant — deliberately parked, not active, not dead
+ * - Not a thing — extraction artifact; never actually Ben's intent
+ */
+export type PersonalCommitmentStatus =
+  | "Open"
+  | "In Progress"
+  | "Waiting"
+  | "Done"
+  | "Recurring"
+  | "Evolved"
+  | "Dormant"
+  | "Not a thing";
+
+export const PERSONAL_COMMITMENT_STATUSES: PersonalCommitmentStatus[] = [
+  "Open",
+  "In Progress",
+  "Waiting",
+  "Done",
+  "Recurring",
+  "Evolved",
+  "Dormant",
+  "Not a thing",
+];
+
 export interface CommitmentContent {
   statement: string;
   type: "commitment" | "follow_up";

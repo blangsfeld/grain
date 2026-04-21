@@ -84,6 +84,32 @@ export interface TaskOffer {
   draft: string | null;
 }
 
+/**
+ * Resolvable pointer to a single row in Ben's Notion Personal Commitments DB.
+ * Captured at synthesis time so the semantic reply interpreter can rewrite
+ * that page a few minutes later without re-querying Notion.
+ */
+export interface KeptIndexItem {
+  page_id: string;
+  name: string;
+  category: string | null;
+  status: string | null;
+  due_date: string | null;
+}
+
+/**
+ * Resolvable pointer to a dx_commitments row (the heard list). Not writable
+ * by the semantic interpreter in v1 — kept for context only, so the LLM
+ * knows what's on Ben's plate without mistaking it for a kept item.
+ */
+export interface PlateIndexItem {
+  commitment_id: string;
+  statement: string;
+  person: string | null;
+  due_date: string | null;
+  age_days: number;
+}
+
 export interface BuddySynthesis {
   generated_at: string;
   opener: string;
@@ -101,6 +127,10 @@ export interface BuddySynthesis {
     beliefs: number;
   };
   voice_warnings: string[];
+  /** 1-indexed sidecar — what the semantic interpreter writes against. */
+  kept_index: KeptIndexItem[];
+  /** 1-indexed sidecar — reference only in v1. */
+  plate_index: PlateIndexItem[];
 }
 
 // ── Fact gathering ─────────────────────────────────
@@ -524,6 +554,23 @@ export async function runBuddySynthesis(): Promise<BuddySynthesis> {
       beliefs: beliefs.length,
     },
     voice_warnings: [],
+    // Sidecars — captured verbatim so the semantic reply interpreter can
+    // resolve "the gmail one" against what was on the list when Ben read
+    // the briefing, not against whatever Notion looks like minutes later.
+    kept_index: kept.slice(0, 30).map((k) => ({
+      page_id: k.id,
+      name: k.name,
+      category: k.category,
+      status: k.status,
+      due_date: k.due_date,
+    })),
+    plate_index: plate.slice(0, 40).map((p) => ({
+      commitment_id: p.id,
+      statement: p.statement,
+      person: p.person,
+      due_date: p.due_date,
+      age_days: p.age_days,
+    })),
   };
 
   // Banned-word check + one retry. Fresh call with the leaked output

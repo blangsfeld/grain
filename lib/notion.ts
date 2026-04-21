@@ -232,6 +232,36 @@ export async function updatePage(
   });
 }
 
+// ── Page fetch ─────────────────────────────────────
+
+export async function getPage(page_id: string): Promise<NotionPage> {
+  return notionFetch<NotionPage>(`/pages/${page_id}`);
+}
+
+// ── Append-only rich_text helper ───────────────────
+
+/**
+ * Append a timestamped line to a rich_text property without losing prior
+ * content. Used for Buddy's per-item Conversation Log. The fetch-then-write
+ * is not transactional — concurrent writers can race — but Buddy is the
+ * only process writing this field, so a race is a non-goal.
+ *
+ * Each entry is prefixed with `YYYY-MM-DD · ` so the log reads as a journal.
+ */
+export async function appendRichText(
+  page_id: string,
+  propName: string,
+  entry: string,
+): Promise<string> {
+  const page = await getPage(page_id);
+  const existing = getRichText(page, propName);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const line = `${stamp} · ${entry.trim()}`;
+  const merged = existing ? `${existing}\n${line}` : line;
+  await updatePage(page_id, { [propName]: richTextProp(merged) });
+  return merged;
+}
+
 // ── Age helpers ────────────────────────────────────
 
 export function daysSince(iso: string | null): number | null {
