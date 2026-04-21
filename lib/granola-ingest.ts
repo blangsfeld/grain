@@ -20,6 +20,8 @@ import { classifyTranscript, getExtractionPlan } from "@/lib/classify";
 import { extractAtoms } from "@/lib/atom-extract";
 import { insertAtoms } from "@/lib/atom-db";
 import { syncCommitmentsFromAtoms } from "@/lib/commitments-sync";
+import { accrueSignals } from "@/lib/signal-engine/accrue";
+import type { RelationshipsPayload } from "@/types/atoms";
 import { loadRegistries, resolveAtoms } from "@/lib/resolve";
 import { buildBootContext } from "@/lib/vault-scan";
 
@@ -273,6 +275,24 @@ export async function ingestFromGranola(options?: {
       } catch (err) {
         console.error(
           `commitments-sync failed for "${meeting.title}":`,
+          err instanceof Error ? err.message : err,
+        );
+      }
+
+      // Accrue to signal_entities / signal_entity_mentions (non-fatal).
+      // The lifecycle index compounds over time — one meeting at a time.
+      try {
+        await accrueSignals({
+          atoms: inserted,
+          meta: (relationshipsAtom?.content as RelationshipsPayload) ?? null,
+          transcript_id: transcriptId,
+          source_date: meetingDate,
+          source_title: meeting.title,
+          people: participantNames,
+        });
+      } catch (err) {
+        console.error(
+          `signal accrual failed for "${meeting.title}":`,
           err instanceof Error ? err.message : err,
         );
       }

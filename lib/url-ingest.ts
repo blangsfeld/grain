@@ -9,6 +9,7 @@ import { classifyTranscript, getExtractionPlan } from "@/lib/classify";
 import { extractAtoms } from "@/lib/atom-extract";
 import { insertAtoms } from "@/lib/atom-db";
 import { loadRegistries, resolveAtoms } from "@/lib/resolve";
+import { accrueSignals } from "@/lib/signal-engine/accrue";
 
 // ─── URL type detection ─────────────────────────
 
@@ -191,7 +192,26 @@ export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
   resolveAtoms(extraction.atoms, contacts, domains);
 
   // Insert
-  await insertAtoms(extraction.atoms);
+  const inserted = await insertAtoms(extraction.atoms);
+
+  // Accrue to signal substrate (non-fatal). URL ingest doesn't populate
+  // meta_relationships, so tension_slugs are empty — voice / belief atoms
+  // still accrue normally.
+  try {
+    await accrueSignals({
+      atoms: inserted,
+      meta: null,
+      transcript_id: txRecord.id,
+      source_date: today,
+      source_title: title,
+      people: [],
+    });
+  } catch (err) {
+    console.error(
+      `signal accrual failed for URL "${title}":`,
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   return {
     title,

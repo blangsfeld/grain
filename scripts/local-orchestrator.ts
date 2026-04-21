@@ -33,6 +33,8 @@ import { runBuddySurface } from "@/lib/agents/buddy-synthesize";
 import { sendTelegramReply } from "@/lib/agents/telegram-desk";
 import { beat } from "@/lib/heartbeat";
 import { materializeHeartbeat } from "@/lib/heartbeat-render";
+import { runNightlyTier1 } from "@/lib/signal-engine/nightly";
+import { composeNightly } from "@/lib/signal-engine/compose";
 
 // Expected cadence per orchestrator phase (hours). Orchestrator fires at
 // 06:45 + 19:45 local, so 18h slack before stale.
@@ -46,6 +48,7 @@ const PHASE_CADENCE_HOURS: Record<string, number> = {
   milli: 18,
   "buddy-surface": 30,    // morning only — only runs in the AM tick
   "heartbeat-sync": 18,
+  "signals-nightly": 18,  // idempotent per calendar date; PM tick is a no-op if AM succeeded
 };
 
 const VAULT_ROOT = join(homedir(), "Documents/Obsidian/Studio");
@@ -416,6 +419,43 @@ async function runHeartbeatSync(): Promise<string> {
 
 // ── Main ────
 
+// ── Phase: Signal engine nightly ──────────────────
+// Runs Tier 1 (retirement, cadence, dormancy, merge judge) + composer.
+// Idempotent per calendar date via signal_nightly_runs.status='succeeded'.
+// Safe to run on both AM and PM ticks — PM no-ops if AM succeeded.
+
+async function runSignalsNightly(): Promise<string> {
+  const today = new Date().toISOString().slice(0, 10);
+  const db = getSupabaseAdmin();
+
+  const { data: existing } = await db
+    .from("signal_nightly_runs")
+    .select("id, composed_narrative, vault_path")
+    .eq("run_date", today)
+    .eq("status", "succeeded")
+    .maybeSingle();
+
+  // If Tier 1 already ran today, just ensure composer has written the vault file.
+  if (existing) {
+    if (!existing.vault_path) {
+      const c = await composeNightly(today);
+      return `tier1 cached, composed (${c.tokens} tok, ${c.vault_path ? "wrote" : "no-vault"})`;
+    }
+    return "already complete for today";
+  }
+
+  // Fresh run
+  const tier1 = await runNightlyTier1(today);
+  const compose = await composeNightly(today);
+  const flags =
+    tier1.crystallizations.length +
+    tier1.dormancies.length +
+    tier1.retirements.length +
+    tier1.merges_auto.length +
+    tier1.merges_proposed.length;
+  return `${flags} flags, ${tier1.tokens_used + compose.tokens} tok${compose.vault_path ? "" : " (no vault write)"}`;
+}
+
 async function main() {
   if (!existsSync(VAULT_ROOT)) {
     console.error(`[orchestrator] vault not found at ${VAULT_ROOT} — aborting`);
@@ -443,6 +483,7 @@ async function main() {
 
   reports.push(await phase("milli-triage", runMilliTriage));
   reports.push(await phase("milli", runMilli));
+  reports.push(await phase("signals-nightly", runSignalsNightly));
 
   if (isMorning) {
     reports.push(await phase("buddy-surface", runBuddySurfacePhase));
