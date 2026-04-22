@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/closure-sync",
       "schedule": "45 12 * * *"
+    },
+    {
+      "path": "/api/cron/pulse",
+      "schedule": "0 16 * * 2,5"
     }
   ]
 }

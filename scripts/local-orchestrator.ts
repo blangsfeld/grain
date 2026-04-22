@@ -36,6 +36,7 @@ import { materializeHeartbeat } from "@/lib/heartbeat-render";
 import { runNightlyTier1 } from "@/lib/signal-engine/nightly";
 import { composeNightly } from "@/lib/signal-engine/compose";
 import { runClosureSync } from "@/lib/closure-sync";
+import { materializeBootBrief } from "@/lib/boot-brief";
 
 // Expected cadence per orchestrator phase (hours). Orchestrator fires at
 // 06:45 + 19:45 local, so 18h slack before stale.
@@ -51,6 +52,7 @@ const PHASE_CADENCE_HOURS: Record<string, number> = {
   "heartbeat-sync": 18,
   "signals-nightly": 18,  // idempotent per calendar date; PM tick is a no-op if AM succeeded
   "closure-sync": 18,     // Notion → dx_commitments mirror; Vercel runs hourly too
+  "boot-brief": 18,       // pre-synthesized launchpad for /boot
 };
 
 const VAULT_ROOT = join(homedir(), "Documents/Obsidian/Studio");
@@ -428,6 +430,12 @@ async function runClosureSyncPhase(): Promise<string> {
   return `checked=${r.checked} updated=${r.updated} (${parts.join(" ")})`;
 }
 
+async function runBootBriefPhase(): Promise<string> {
+  const r = await materializeBootBrief();
+  if (!r.ok) throw new Error(r.reason ?? "boot-brief materialize failed");
+  return `sections=${r.sections} anomalies=${r.anomalies}`;
+}
+
 // ── Main ────
 
 // ── Phase: Signal engine nightly ──────────────────
@@ -502,6 +510,9 @@ async function main() {
   }
 
   reports.push(await phase("heartbeat-sync", runHeartbeatSync));
+  // Boot-brief runs LAST — it synthesizes heartbeat + fresh pulses + vault
+  // snapshots, so every upstream phase should have pulsed first.
+  reports.push(await phase("boot-brief", runBootBriefPhase));
 
   const failed = reports.filter((r) => !r.ok);
   const total = reports.reduce((s, r) => s + r.ms, 0);
