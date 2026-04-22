@@ -35,6 +35,7 @@ import { beat } from "@/lib/heartbeat";
 import { materializeHeartbeat } from "@/lib/heartbeat-render";
 import { runNightlyTier1 } from "@/lib/signal-engine/nightly";
 import { composeNightly } from "@/lib/signal-engine/compose";
+import { runClosureSync } from "@/lib/closure-sync";
 
 // Expected cadence per orchestrator phase (hours). Orchestrator fires at
 // 06:45 + 19:45 local, so 18h slack before stale.
@@ -49,6 +50,7 @@ const PHASE_CADENCE_HOURS: Record<string, number> = {
   "buddy-surface": 30,    // morning only — only runs in the AM tick
   "heartbeat-sync": 18,
   "signals-nightly": 18,  // idempotent per calendar date; PM tick is a no-op if AM succeeded
+  "closure-sync": 18,     // Notion → dx_commitments mirror; Vercel runs hourly too
 };
 
 const VAULT_ROOT = join(homedir(), "Documents/Obsidian/Studio");
@@ -417,6 +419,15 @@ async function runHeartbeatSync(): Promise<string> {
   return `${res.pulses} pulses, ${res.anomalies} anomalies`;
 }
 
+async function runClosureSyncPhase(): Promise<string> {
+  const r = await runClosureSync();
+  if (r.updated === 0) return `checked=${r.checked} no drift`;
+  const parts = Object.entries(r.byStatus)
+    .filter(([, n]) => n > 0)
+    .map(([k, n]) => `${k}=${n}`);
+  return `checked=${r.checked} updated=${r.updated} (${parts.join(" ")})`;
+}
+
 // ── Main ────
 
 // ── Phase: Signal engine nightly ──────────────────
@@ -484,6 +495,7 @@ async function main() {
   reports.push(await phase("milli-triage", runMilliTriage));
   reports.push(await phase("milli", runMilli));
   reports.push(await phase("signals-nightly", runSignalsNightly));
+  reports.push(await phase("closure-sync", runClosureSyncPhase));
 
   if (isMorning) {
     reports.push(await phase("buddy-surface", runBuddySurfacePhase));

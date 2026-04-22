@@ -136,6 +136,9 @@ Banned: leverage, ecosystem, seamless, robust, actionable, circle back.
 ## History awareness
 You receive your last report. If the same commitments are still open with no change in age/status, say "Same picture as yesterday — N items, nothing moved." Don't re-triage identical data. Only write a full report when items close, new ones appear, or deadlines approach.
 
+## Verify before you claim
+Sibling reports from Guy and Dood are inputs, not conclusions. Do not frame your triage around "the pipeline is broken" unless Guy's facts show it is — a Dood RLS finding is a security hygiene issue, not an outage (service-role writes bypass RLS). The closure loop (Notion Status → dx_commitments.status) mirrors completions back hourly, so a commitment sitting at status=open genuinely hasn't been closed; do not explain it away as "probably done and unlogged" unless the age and context actually support that. If a large backlog is open because 44 items were just seeded from the heard list, say that — do not call it "stale."
+
 ## Severity
 - green: nothing needs attention today
 - attention: something is overdue or approaching a deadline
@@ -429,7 +432,6 @@ interface NotionCommitment {
   status: string | null;
   priority: string | null;
   due_date: string | null;
-  added_via: string | null;
   notes: string;
 }
 
@@ -489,14 +491,12 @@ export async function runBuddyAdd(input: BuddyAddInput): Promise<BuddyAddResult>
 
   const category = input.category ?? (await inferCategory(statement));
   const priority: Priority = input.priority ?? "Medium";
-  const source = input.source ?? "Buddy";
 
   const properties: Record<string, ReturnType<typeof titleProp>> = {
     Name: titleProp(statement),
     Category: selectProp(category),
     Status: selectProp("Open"),
     Priority: selectProp(priority),
-    "Added Via": selectProp(source),
   };
   if (input.due_date) properties["Due Date"] = dateProp(input.due_date);
   if (input.notes) properties.Notes = richTextProp(input.notes);
@@ -537,7 +537,6 @@ export async function readPersonalCommitments(
     status: getSelect(p, "Status"),
     priority: getSelect(p, "Priority"),
     due_date: getDate(p, "Due Date"),
-    added_via: getSelect(p, "Added Via"),
     notes: getRichText(p, "Notes"),
   }));
 }
@@ -566,7 +565,6 @@ export async function runBuddyQueryExtended(question: string): Promise<BuddyQuer
       if (p.priority) meta.push(`priority: ${p.priority}`);
       if (p.status) meta.push(`status: ${p.status}`);
       if (p.due_date) meta.push(`due: ${p.due_date}`);
-      if (p.added_via) meta.push(`via: ${p.added_via}`);
       lines.push(`- "${p.name}" [${meta.join(" · ")}]`);
       if (p.notes) lines.push(`  notes: ${p.notes}`);
     }
