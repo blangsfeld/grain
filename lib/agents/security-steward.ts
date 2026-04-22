@@ -10,7 +10,7 @@ import { getAnthropicClient } from "@/lib/anthropic";
 import {
   writeAgentOutput,
   readLatestAgentOutput,
-  readOwnHistory,
+  readOwnSnapshot,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
 
@@ -150,13 +150,22 @@ Casual but clear. "Yo, 36 tables in JPMP have wide-open RLS" not "Multiple table
 
 Banned: leverage, ecosystem, robust, proactive, remediate (use "fix"), holistic.
 
-## History awareness
-You receive your last report. If findings are identical to yesterday (same count, same tables, same patterns), say "Same findings as yesterday — N warnings, no change. Fix the patterns from the last report." Don't re-list 36 JPMP tables daily. Only write a full report when findings change, new ones appear, or old ones get fixed.
+## Prior run snapshot
+You receive a compact numerical snapshot of your previous sweep (totals + per-project ERROR/WARN/INFO counts). No prior narrative — just numbers. Compute the per-project delta against today's scan first, then decide what to write:
+- If every project's WARN count is unchanged, state totals on one line ("totals unchanged: N WARN across M projects, see prior report for patterns") and stop. Do not re-list tables.
+- If any project's WARN count moved, lead with the delta using an arrow ("grain: 55 → 15 WARN") and explain which patterns got fixed or appeared.
+- Never state "same findings" or "no fixes applied" without confirming it against the snapshot numbers. A reduced WARN count means fixes *did* land, even if remaining warnings look similar.
+- Do not inherit the prior run's severity. Compute severity from today's totals.
 
 ## Severity
 - green: no WARN or ERROR findings
 - attention: WARN findings exist
 - failure: ERROR findings or fetch failures
+
+Severity is computed from your totals against this rubric. A sibling reporting "failure" does not promote your severity. If your totals are 0 ERROR and 0 fetch failures, the ceiling is "attention" no matter how alarming Guy or Buddy sounded.
+
+## Cross-signal discipline
+When you reference a sibling, quote or summarize only what they actually said. Do not invent causal claims to bridge findings — if Buddy did not say "RLS is blocking service-role writes," do not attribute that to them. Service-role writes bypass RLS; do not claim RLS warnings are blocking extraction or sync unless a sibling's facts (not framing) support it.
 
 ## Output
 Return strict JSON:
@@ -227,7 +236,31 @@ function buildContext(facts: DoodFacts, siblings: { guy: string | null; buddy: s
   return lines.join("\n");
 }
 
-// History added in the entrypoint below, not in buildContext (which must stay sync for parallel exec)
+function priorSnapshotBlock(prior: {
+  run_at: string;
+  hours_ago: number;
+  severity: AgentSeverity;
+  findings: Record<string, unknown>;
+} | null): string {
+  if (!prior) return "";
+  const f = prior.findings as {
+    errors?: number;
+    warnings?: number;
+    info?: number;
+    projects?: Array<{ name: string; ok: boolean; errors: number; warnings: number; info: number }>;
+  };
+  const lines: string[] = [];
+  lines.push("");
+  lines.push(`# Prior run snapshot (${prior.hours_ago}h ago, severity=${prior.severity})`);
+  lines.push(`- totals: ${f.errors ?? "?"} ERROR, ${f.warnings ?? "?"} WARN, ${f.info ?? "?"} INFO`);
+  if (f.projects && Array.isArray(f.projects)) {
+    for (const p of f.projects) {
+      lines.push(`- ${p.name}: ${p.errors}E / ${p.warnings}W / ${p.info}I${p.ok ? "" : " (fetch failed)"}`);
+    }
+  }
+  lines.push("Compare today's per-project counts to these numbers. Lead with any project whose WARN count moved.");
+  return lines.join("\n");
+}
 
 function parseResponse(raw: string): { severity: AgentSeverity; markdown: string } | null {
   const cleaned = raw.replace(/```(?:json)?\s*|\s*```/g, "").trim();
@@ -255,7 +288,7 @@ export interface DoodReport {
 
 export async function runAndWriteSecuritySteward(): Promise<{ output_id: string; report: DoodReport }> {
   const run_at = new Date().toISOString();
-  const [facts, siblings, ownHistory] = await Promise.all([gatherFacts(), readSiblings(), readOwnHistory(AGENT_ID, 2)]);
+  const [facts, siblings, prior] = await Promise.all([gatherFacts(), readSiblings(), readOwnSnapshot(AGENT_ID)]);
 
   const anthropic = getAnthropicClient(30_000);
   const response = await anthropic.messages.create({
@@ -264,9 +297,7 @@ export async function runAndWriteSecuritySteward(): Promise<{ output_id: string;
     system: PERSONA_PROMPT,
     messages: [{
       role: "user",
-      content: buildContext(facts, siblings) + (ownHistory.length > 0
-        ? `\n\n# Your last report (don't re-list same findings)\n${ownHistory[0].markdown_preview}\n`
-        : ""),
+      content: buildContext(facts, siblings) + priorSnapshotBlock(prior),
     }],
   });
 

@@ -139,3 +139,39 @@ export async function readOwnHistory(agent_id: string, limit = 4): Promise<Array
     findings: (row.findings ?? {}) as Record<string, unknown>,
   }));
 }
+
+/**
+ * Structured prior-run snapshot. Preferred over readOwnHistory for agents
+ * that reason about deltas — passing numbers avoids re-importing yesterday's
+ * narrative framing, which is the mechanism behind the Guy/Dood/Buddy echo
+ * chamber where "RLS breach" and "Same findings as yesterday" persisted even
+ * after the underlying numbers moved.
+ */
+export async function readOwnSnapshot(agent_id: string): Promise<{
+  run_at: string;
+  hours_ago: number;
+  severity: AgentSeverity;
+  findings: Record<string, unknown>;
+} | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("agent_outputs")
+    .select("run_at, severity, findings")
+    .eq("agent_id", agent_id)
+    .order("run_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(`agent_outputs snapshot read failed: ${error.message}`);
+  if (!data) return null;
+
+  const runAt = data.run_at as string;
+  const hoursAgo = Math.round(((Date.now() - new Date(runAt).getTime()) / 3_600_000) * 10) / 10;
+
+  return {
+    run_at: runAt,
+    hours_ago: hoursAgo,
+    severity: data.severity as AgentSeverity,
+    findings: (data.findings ?? {}) as Record<string, unknown>,
+  };
+}

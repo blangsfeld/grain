@@ -12,7 +12,7 @@ import { getAnthropicClient } from "@/lib/anthropic";
 import {
   writeAgentOutput,
   readLatestAgentOutput,
-  readOwnHistory,
+  readOwnSnapshot,
   type AgentSeverity,
 } from "@/lib/agents/agent-output";
 import {
@@ -133,8 +133,8 @@ Direct. No corporate hedging. "You have two things. Neither is urgent. Here's wh
 
 Banned: leverage, ecosystem, seamless, robust, actionable, circle back.
 
-## History awareness
-You receive your last report. If the same commitments are still open with no change in age/status, say "Same picture as yesterday — N items, nothing moved." Don't re-triage identical data. Only write a full report when items close, new ones appear, or deadlines approach.
+## Prior run snapshot
+You receive a compact numerical snapshot of your previous triage (totals: open, ben_count, others_count, skipped). No prior narrative — just numbers. Compare to today's totals. If total_open and ben_count are unchanged, say "no material change — N on your plate, M on others', nothing closed or opened" in one line and stop. If counts moved, lead with the delta ("ben's plate: 25 → 22, three closed") before triaging. Do not inherit the prior severity.
 
 ## Verify before you claim
 Sibling reports from Guy and Dood are inputs, not conclusions. Do not frame your triage around "the pipeline is broken" unless Guy's facts show it is — a Dood RLS finding is a security hygiene issue, not an outage (service-role writes bypass RLS). The closure loop (Notion Status → dx_commitments.status) mirrors completions back hourly, so a commitment sitting at status=open genuinely hasn't been closed; do not explain it away as "probably done and unlogged" unless the age and context actually support that. If a large backlog is open because 44 items were just seeded from the heard list, say that — do not call it "stale."
@@ -144,13 +144,22 @@ Sibling reports from Guy and Dood are inputs, not conclusions. Do not frame your
 - attention: something is overdue or approaching a deadline
 - failure: a high-weight commitment is significantly overdue and unaddressed
 
+Severity comes from your commitment facts, not sibling tone. If no high-weight item is significantly overdue, the ceiling is "attention" even if Guy or Dood reported "failure". Do not promote severity to match siblings.
+
 ## Output
 Return strict JSON:
 {"severity": "green|attention|failure", "markdown": "full report with frontmatter"}`;
 
 // ── Reasoning ──────────────────────────────────────
 
-function buildContext(facts: BuddyFacts, siblings: { guy: string | null; dood: string | null }, ownHistory: Array<{ markdown_preview: string }> = []): string {
+interface PriorSnapshot {
+  run_at: string;
+  hours_ago: number;
+  severity: AgentSeverity;
+  findings: Record<string, unknown>;
+}
+
+function buildContext(facts: BuddyFacts, siblings: { guy: string | null; dood: string | null }, prior: PriorSnapshot | null): string {
   const lines: string[] = [];
   lines.push(`# Commitment data (${facts.total_open} open, ${facts.skipped_count} classified as skip/scaffolding, ${facts.all_open.length} real)`);
   lines.push("");
@@ -188,9 +197,17 @@ function buildContext(facts: BuddyFacts, siblings: { guy: string | null; dood: s
     lines.push("");
   }
 
-  if (ownHistory.length > 0) {
-    lines.push("# Your last report (don't repeat if nothing changed)");
-    lines.push(ownHistory[0].markdown_preview);
+  if (prior) {
+    const f = prior.findings as {
+      total_open?: number;
+      skipped?: number;
+      ben_count?: number;
+      others_count?: number;
+    };
+    lines.push(`# Prior run snapshot (${prior.hours_ago}h ago, severity=${prior.severity})`);
+    lines.push(`- total_open: ${f.total_open ?? "?"}  skipped: ${f.skipped ?? "?"}`);
+    lines.push(`- ben_count: ${f.ben_count ?? "?"}  others_count: ${f.others_count ?? "?"}`);
+    lines.push("Compare against today's counts above. Lead with any delta. If counts match, one-line and stop.");
     lines.push("");
   }
 
@@ -225,14 +242,14 @@ export interface BuddyReport {
 
 export async function runAndWriteEa(): Promise<{ output_id: string; report: BuddyReport }> {
   const run_at = new Date().toISOString();
-  const [facts, siblings, ownHistory] = await Promise.all([gatherFacts(), readSiblings(), readOwnHistory(AGENT_ID, 2)]);
+  const [facts, siblings, prior] = await Promise.all([gatherFacts(), readSiblings(), readOwnSnapshot(AGENT_ID)]);
 
   const anthropic = getAnthropicClient(30_000);
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 800,
     system: PERSONA_PROMPT,
-    messages: [{ role: "user", content: buildContext(facts, siblings, ownHistory) }],
+    messages: [{ role: "user", content: buildContext(facts, siblings, prior) }],
   });
 
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";
