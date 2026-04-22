@@ -10,6 +10,7 @@ import { extractAtoms } from "@/lib/atom-extract";
 import { insertAtoms } from "@/lib/atom-db";
 import { loadRegistries, resolveAtoms } from "@/lib/resolve";
 import { accrueSignals } from "@/lib/signal-engine/accrue";
+import { fetchYouTubeTranscript } from "@/lib/fetch-youtube-transcript";
 
 // ─── URL type detection ─────────────────────────
 
@@ -118,6 +119,8 @@ export async function fetchArticle(url: string): Promise<{ title: string; text: 
 
 // ─── Main ingest ────────────────────────────────
 
+export type TranscriptSourceType = "claude_chat" | "article" | "youtube";
+
 export interface UrlIngestResult {
   title: string;
   url: string;
@@ -125,19 +128,30 @@ export interface UrlIngestResult {
   atoms: number;
   tokens: number;
   pass_results: Record<string, number>;
-  status: "extracted" | "dismissed" | "duplicate";
+  status: "extracted" | "dismissed" | "duplicate" | "no_content";
 }
 
-export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
+function sourceTypeToUrlType(st: TranscriptSourceType): UrlType {
+  if (st === "claude_chat") return "claude_chat";
+  if (st === "youtube") return "video";
+  return "article";
+}
+
+/**
+ * Core Grain pipeline for pre-fetched text: dedup → dx_transcripts →
+ * classify → extract atoms → resolve entities → signal accrual. Callable
+ * by URL ingest, Milli's wiki triage, or any other upstream fetcher.
+ */
+export async function ingestTranscript(params: {
+  title: string;
+  url: string;
+  text: string;
+  sourceType: TranscriptSourceType;
+}): Promise<UrlIngestResult> {
+  const { title, url, text, sourceType } = params;
   const db = getSupabaseAdmin();
-  const urlType = detectUrlType(url);
+  const urlType = sourceTypeToUrlType(sourceType);
 
-  // Fetch content
-  const { title, text } = urlType === "claude_chat"
-    ? await fetchClaudeChat(url)
-    : await fetchArticle(url);
-
-  // Dedup check
   const hash = createHash("sha256").update(text.trim()).digest("hex");
   const { data: existing } = await db
     .from("dx_transcripts")
@@ -149,10 +163,7 @@ export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
     return { title, url, url_type: urlType, atoms: 0, tokens: 0, pass_results: {}, status: "duplicate" };
   }
 
-  // Store transcript
   const today = new Date().toISOString().split("T")[0];
-  const sourceType = urlType === "claude_chat" ? "claude_chat" : "article";
-
   const { data: txRecord, error: txError } = await db
     .from("dx_transcripts")
     .insert({
@@ -160,7 +171,7 @@ export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
       source_date: today,
       source_type: sourceType,
       source_url: url,
-      transcript: text.slice(0, 100_000), // cap at 100k chars
+      transcript: text.slice(0, 100_000),
       transcript_hash: hash,
       word_count: text.split(/\s+/).length,
       inbox_status: "approved",
@@ -169,7 +180,6 @@ export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
     .single();
   if (txError) throw new Error(`Transcript insert failed: ${txError.message}`);
 
-  // Classify
   const classification = await classifyTranscript(text, title);
   const plan = getExtractionPlan(classification);
 
@@ -177,26 +187,19 @@ export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
     return { title, url, url_type: urlType, atoms: 0, tokens: 0, pass_results: {}, status: "dismissed" };
   }
 
-  // Extract
   const extraction = await extractAtoms(text, title, plan.passes);
 
-  // Stamp metadata
   for (const atom of extraction.atoms) {
     atom.transcript_id = txRecord.id;
     atom.source_title = title;
     atom.source_date = today;
   }
 
-  // Resolve entities
   const { contacts, domains } = await loadRegistries();
   resolveAtoms(extraction.atoms, contacts, domains);
 
-  // Insert
   const inserted = await insertAtoms(extraction.atoms);
 
-  // Accrue to signal substrate (non-fatal). URL ingest doesn't populate
-  // meta_relationships, so tension_slugs are empty — voice / belief atoms
-  // still accrue normally.
   try {
     await accrueSignals({
       atoms: inserted,
@@ -222,4 +225,44 @@ export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
     pass_results: extraction.pass_results,
     status: "extracted",
   };
+}
+
+async function fetchYouTubeTitle(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": "Grain/1.0" } });
+    if (!res.ok) return "YouTube video";
+    const html = await res.text();
+    const m =
+      html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i) ??
+      html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (!m) return "YouTube video";
+    return m[1]
+      .replace(/\s*-\s*YouTube\s*$/i, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .trim();
+  } catch {
+    return "YouTube video";
+  }
+}
+
+export async function ingestFromUrl(url: string): Promise<UrlIngestResult> {
+  const urlType = detectUrlType(url);
+
+  if (urlType === "video") {
+    const transcript = await fetchYouTubeTranscript(url);
+    if (!transcript || transcript.text.length < 200) {
+      return { title: url, url, url_type: "video", atoms: 0, tokens: 0, pass_results: {}, status: "no_content" };
+    }
+    const title = await fetchYouTubeTitle(url);
+    return ingestTranscript({ title, url, text: transcript.text, sourceType: "youtube" });
+  }
+
+  const { title, text } = urlType === "claude_chat"
+    ? await fetchClaudeChat(url)
+    : await fetchArticle(url);
+
+  const sourceType: TranscriptSourceType = urlType === "claude_chat" ? "claude_chat" : "article";
+  return ingestTranscript({ title, url, text, sourceType });
 }

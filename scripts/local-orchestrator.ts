@@ -91,6 +91,7 @@ const PHASE_TIMEOUT_MS: Record<string, number> = {
   "weekly-digest": 10 * 60_000,         // big generation + vault write
   "company-pages": 15 * 60_000,         // per-company generation loop
   "signals-nightly": 40 * 60_000,       // multi-signal classification loop
+  "milli-triage": 20 * 60_000,          // up to 10 items × (classify + atom extract)
   "milli": 8 * 60_000,                  // lint pass across ~16 pages
   "closure-sync": 2 * 60_000,           // hits Notion + Supabase
 };
@@ -378,7 +379,7 @@ async function runMilliTriage(): Promise<string> {
   const rollupNote = t.rollup && t.rollup.months_rolled > 0
     ? ` · rolled ${t.rollup.months_rolled}mo/${t.rollup.files_consolidated} stubs`
     : "";
-  return `scanned=${t.scanned} processed=${t.processed}${detail} review=${t.review} errors=${t.errors}${rollupNote}`;
+  return `scanned=${t.scanned} processed=${t.processed}${detail} review=${t.review} errors=${t.errors} atoms=${t.atoms}${rollupNote}`;
 }
 
 // ── Phase 6b: Milli reflection (daily) ────

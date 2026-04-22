@@ -30,6 +30,8 @@ import {
   fetchArticle,
   fetchClaudeChat,
   detectUrlType,
+  ingestTranscript,
+  type TranscriptSourceType,
   type UrlType,
 } from "@/lib/url-ingest";
 import { fetchYouTubeTranscript } from "@/lib/fetch-youtube-transcript";
@@ -56,6 +58,8 @@ export interface TriageResult {
   slug?: string;
   url?: string;
   section?: WikiSection;
+  atoms?: number;
+  atom_error?: string;
 }
 
 export interface TriageSummary {
@@ -64,6 +68,7 @@ export interface TriageSummary {
   review: number;
   skipped: number;
   errors: number;
+  atoms: number;
   details: TriageResult[];
   rollup?: RollupSummary;
 }
@@ -499,10 +504,13 @@ async function processItem(filename: string, existingSlugs: Set<string>): Promis
   const urlType = detectUrlType(url);
   const routing = urlTypeRouting(urlType);
 
-  // Fetch content
+  // Fetch content. `rawContent` is the full fetched text and becomes the
+  // source of truth for dedup hashing + atom extraction. `content` is the
+  // 80k-sliced view written into the wiki page body. Keeping them distinct
+  // means Milli's hash matches the paste-UI path through ingestFromUrl.
   let title = "Untitled";
   let author: string | null = null;
-  let content = "";
+  let rawContent = "";
   let contentLabel = "Content";
   const extraFm: Record<string, string | null> = {};
 
@@ -518,33 +526,33 @@ async function processItem(filename: string, existingSlugs: Set<string>): Promis
       // is substantially richer signal than the marketing description.
       const transcript = await fetchYouTubeTranscript(url).catch(() => null);
       if (transcript && transcript.text.length >= 200) {
-        content = transcript.text.slice(0, 80_000);
+        rawContent = transcript.text;
         contentLabel = "Transcript";
         extraFm.transcript = "present";
         extraFm.transcript_language = transcript.language;
         extraFm.transcript_duration_seconds = String(transcript.duration_seconds);
         extraFm.transcript_segment_count = String(transcript.segment_count);
       } else {
-        content = meta.description ?? "(no description returned by YouTube)";
+        rawContent = meta.description ?? "(no description returned by YouTube)";
         contentLabel = "Description";
         extraFm.transcript = "unavailable";
       }
     } else if (urlType === "claude_chat") {
       const chat = await fetchClaudeChat(url);
       title = chat.title;
-      content = chat.text.slice(0, 80_000);
+      rawContent = chat.text;
       contentLabel = "Conversation";
     } else {
       // Article — prefer body text if it's already substantive (clipped transcript case)
       const bodyStripped = body.trim();
       if (bodyStripped.length > 1500) {
-        content = bodyStripped;
+        rawContent = bodyStripped;
         title = (fm.title as string | null) ?? extractFirstHeading(body) ?? filename.replace(/\.md$/, "");
         contentLabel = "Content (from clipper)";
       } else {
         const article = await fetchArticle(url);
         title = article.title;
-        content = article.text.slice(0, 80_000);
+        rawContent = article.text;
         contentLabel = "Content";
       }
     }
@@ -552,6 +560,8 @@ async function processItem(filename: string, existingSlugs: Set<string>): Promis
     const msg = err instanceof Error ? err.message : String(err);
     return { inbox_file: filename, status: "error", url, reason: `fetch: ${msg}` };
   }
+
+  const content = rawContent.slice(0, 80_000);
 
   // Classify
   const existingSlugList = Array.from(existingSlugs);
@@ -595,6 +605,28 @@ async function processItem(filename: string, existingSlugs: Set<string>): Promis
   // Move inbox file to archive
   moveToArchive(fullpath, filename, slug);
 
+  // Emit Grain atoms from the same content we just wrote to the wiki —
+  // skip video items that fell back to description (marketing copy, not
+  // extractable intelligence). Non-fatal: wiki page is already written,
+  // atom emission is a bonus track.
+  let atomCount: number | undefined;
+  let atomError: string | undefined;
+  const substantiveForAtoms =
+    (urlType === "video" && contentLabel === "Transcript") ||
+    urlType === "claude_chat" ||
+    urlType === "article";
+  if (substantiveForAtoms && rawContent.length >= 200) {
+    const sourceType: TranscriptSourceType =
+      urlType === "video" ? "youtube" : urlType === "claude_chat" ? "claude_chat" : "article";
+    try {
+      const ingest = await ingestTranscript({ title, url, text: rawContent, sourceType });
+      atomCount = ingest.atoms;
+    } catch (err) {
+      atomError = err instanceof Error ? err.message : String(err);
+      console.error(`[wiki-triage] atom ingest failed for ${slug}: ${atomError}`);
+    }
+  }
+
   return {
     inbox_file: filename,
     status: "processed",
@@ -602,6 +634,8 @@ async function processItem(filename: string, existingSlugs: Set<string>): Promis
     slug,
     section: routing.section,
     wiki_page: pagePath.replace(VAULT_ROOT + "/", ""),
+    atoms: atomCount,
+    atom_error: atomError,
   };
 }
 
@@ -730,7 +764,7 @@ export function rollupArchive(): RollupSummary {
 
 export async function processInbox(): Promise<TriageSummary> {
   if (!existsSync(INBOX)) {
-    return { scanned: 0, processed: 0, review: 0, skipped: 0, errors: 0, details: [] };
+    return { scanned: 0, processed: 0, review: 0, skipped: 0, errors: 0, atoms: 0, details: [] };
   }
 
   const files = readdirSync(INBOX)
@@ -759,8 +793,9 @@ export async function processInbox(): Promise<TriageSummary> {
   const review = details.filter((d) => d.status === "needs_review").length;
   const skipped = details.filter((d) => d.status === "skipped").length;
   const errors = details.filter((d) => d.status === "error").length;
+  const atoms = details.reduce((sum, d) => sum + (d.atoms ?? 0), 0);
 
-  return { scanned: files.length, processed, review, skipped, errors, details, rollup };
+  return { scanned: files.length, processed, review, skipped, errors, atoms, details, rollup };
 }
 
 // ── Stub writer (Telegram → inbox) ───────────

@@ -19,14 +19,16 @@ async function main() {
   console.log("Milli triage...");
   const triage = await processInbox();
   console.log(
-    `  scanned=${triage.scanned} processed=${triage.processed} review=${triage.review} skipped=${triage.skipped} errors=${triage.errors}`,
+    `  scanned=${triage.scanned} processed=${triage.processed} review=${triage.review} skipped=${triage.skipped} errors=${triage.errors} atoms=${triage.atoms}`,
   );
   for (const d of triage.details) {
     const tag = d.status.padEnd(13);
     const url = d.url ? ` ${d.url}` : "";
     const reason = d.reason ? ` — ${d.reason}` : "";
     const slug = d.slug ? ` → [[${d.slug}]]` : "";
-    console.log(`  ${tag} ${d.inbox_file}${slug}${url}${reason}`);
+    const atoms = d.atoms !== undefined ? ` +${d.atoms} atoms` : "";
+    const atomErr = d.atom_error ? ` [atom err: ${d.atom_error}]` : "";
+    console.log(`  ${tag} ${d.inbox_file}${slug}${url}${reason}${atoms}${atomErr}`);
   }
   if (triage.rollup && (triage.rollup.months_rolled > 0 || triage.rollup.errors.length > 0)) {
     console.log(
