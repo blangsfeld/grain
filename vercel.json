@@ -46,7 +46,7 @@
     },
     {
       "path": "/api/cron/closure-sync",
-      "schedule": "17 * * * *"
+      "schedule": "45 12 * * *"
     }
   ]
 }
