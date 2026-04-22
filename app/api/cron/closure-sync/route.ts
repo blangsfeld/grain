@@ -2,7 +2,9 @@
  * GET /api/cron/closure-sync — mirror Notion kept-list Status back to
  * dx_commitments.status so the heard side knows when things are done.
  *
- * Cron cadence: every 30 minutes (see vercel.json).
+ * Cron cadence: daily at 12:45 UTC (see vercel.json). The local orchestrator
+ * also runs this phase twice a day, so intra-day closures still propagate
+ * even though Vercel only touches it once.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -33,7 +35,7 @@ export async function GET(req: NextRequest) {
       source: "cron.closure-sync",
       status: "ok",
       summary,
-      cadenceHours: 1,
+      cadenceHours: 24,
       metadata: result as unknown as Record<string, unknown>,
     });
     return NextResponse.json({ ok: true, ...result });
@@ -43,7 +45,7 @@ export async function GET(req: NextRequest) {
       source: "cron.closure-sync",
       status: "failure",
       summary: msg.slice(0, 180),
-      cadenceHours: 1,
+      cadenceHours: 24,
     });
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }

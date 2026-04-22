@@ -79,10 +79,29 @@ interface PhaseReport {
   ms: number;
 }
 
+// Per-phase outer timeout budget. Guards the tick against wedged fetches
+// when the Mac sleeps mid-run — the Anthropic SDK's internal timeout and
+// Supabase's raw fetch both fail to fire reliably after a resume, so we
+// race the phase against a setTimeout that always resolves. Phases that
+// already have their own fine-grained timeouts (meetings) get the biggest
+// budgets. Unlisted phases run without an outer timeout.
+const PHASE_TIMEOUT_MS: Record<string, number> = {
+  "vault-snapshots": 2 * 60_000,        // normal ~2s; 2min is a generous cap
+  "buddy-surface": 4 * 60_000,          // Sonnet call; normal ~100s
+  "weekly-digest": 10 * 60_000,         // big generation + vault write
+  "company-pages": 15 * 60_000,         // per-company generation loop
+  "signals-nightly": 40 * 60_000,       // multi-signal classification loop
+  "milli": 8 * 60_000,                  // lint pass across ~16 pages
+  "closure-sync": 2 * 60_000,           // hits Notion + Supabase
+};
+
 async function phase(name: string, fn: () => Promise<string>): Promise<PhaseReport> {
   const start = Date.now();
+  const budget = PHASE_TIMEOUT_MS[name];
   try {
-    const summary = await fn();
+    const summary = budget
+      ? await withTimeout(fn(), budget, `phase:${name}`)
+      : await fn();
     const ms = Date.now() - start;
     console.log(`[${name}] OK (${ms}ms) — ${summary}`);
     // Mark as 'attention' if the phase ran pathologically long (>10 min for normal,
