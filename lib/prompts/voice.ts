@@ -8,11 +8,13 @@ export function buildVoicePrompt(transcript: string, title: string): string {
   return `You are extracting the strongest verbal moments from the speaker labeled "You:" in this transcript. These are their signature moves — compressions, reframes, metaphors, and philosophy captures that landed in the room.
 
 Types of moments to capture:
-- **Compression**: A complex idea collapsed into one sentence. "We designed a starting point. They built everything after it."
+- **Compression**: A complex idea collapsed into one short sentence — the kind of line a reader would underline.
 - **Reframe**: A shift in how to see something that changed the conversation's direction.
-- **Cross-domain bridge**: Mapping one domain onto another. "Motion is a dialect, not decoration."
-- **Philosophy capture**: A belief system made tangible. "I think of it as scaffolding."
+- **Cross-domain bridge**: Using the vocabulary of one domain to explain another.
+- **Philosophy capture**: A conviction or belief made tangible in concrete language.
 - **Posture articulation**: How they approach the work, made explicit.
+
+Do not invent or paraphrase quotes. The "quote" field must be a verbatim substring of the "You:" speech in the transcript below. If no moment in the transcript meets the bar, return an empty array.
 
 For each moment:
 1. The exact quote from the transcript

@@ -1,0 +1,2321 @@
+{
+  "archived_at": "2026-04-22T03:13:13.547452+00:00",
+  "reason": "voice prompt few-shot contamination \u2014 three example phrases hallucinated across unrelated transcripts; scaffolding family fragmented across multiple signal_entities",
+  "phrase_families": [
+    "designed a starting point",
+    "dialect not decoration",
+    "think of it as scaffolding"
+  ],
+  "prompt_fix_commit": "lib/prompts/voice.ts \u2014 replaced concrete examples with structural descriptions",
+  "atoms": [
+    {
+      "id": "38f0761b-acb4-4553-99a4-d02d8e416cfa",
+      "created_at": "2026-04-08T21:40:44.753478+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "N/A",
+        "use_it_for": "N/A",
+        "why_it_works": "This quote doesn't appear in the transcript - this was an example from the instructions"
+      },
+      "transcript_id": "19b715ae-2bac-42c5-b4eb-d0b27630e755",
+      "source_title": "[INT] Anthropic Gaviota | Claude Session ",
+      "source_date": "2026-01-05",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "544855bd-82fb-4ada-a1b3-1373dd6f5d4f",
+      "created_at": "2026-04-17T15:20:28.235242+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "You designed a starting point. They built everything after it.",
+        "context": "Framing the significance of 9th grade choices without creating anxiety about permanent consequences",
+        "use_it_for": "Educational philosophy pieces, orientation materials, or arguments about the importance of beginnings",
+        "why_it_works": "Compression of the entire high school experience into one clear metaphor - positions 9th grade as foundation rather than destination"
+      },
+      "transcript_id": "db31686f-a7f5-4cbf-a364-bce6e120af86",
+      "source_title": "Berkeley Carroll night",
+      "source_date": "2026-04-15",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "f80e11a3-7f95-4b5c-a8f6-b2adc0e336db",
+      "created_at": "2026-04-17T15:21:40.411243+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Responding to questions about what types of projects Buck wouldn't take on, specifically around ongoing product maintenance",
+        "use_it_for": "Explaining scope boundaries in project proposals or when clients ask about ongoing maintenance responsibilities",
+        "why_it_works": "Perfect compression technique - collapses the complex handoff between design and development into one clean sentence that clarifies roles and boundaries"
+      },
+      "transcript_id": "3328c9de-e092-46f7-8c5b-efc48be2ed78",
+      "source_title": "[Global INT] Production x ARG Presents | Assets for Digital Products",
+      "source_date": "2026-04-15",
+      "entities": [
+        "Michelle Higa Fox"
+      ],
+      "domain": "BUCK",
+      "domain_id": "6e874a96-57dd-4953-8dd0-b055375892d2",
+      "contact_ids": [
+        "9968379a-81e8-43a5-8a5d-f2d8b345153b"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "9359c826-befe-405f-9dfa-965dbc9bf4e1",
+      "created_at": "2026-04-08T21:51:57.663931+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how to measure systems work and the challenge of attribution when clients scale work internally",
+        "use_it_for": "Case studies where you need to show disproportionate impact from foundational work, or when positioning strategic consulting value over execution volume",
+        "why_it_works": "Compression technique that collapses the entire client relationship dynamic into one clear before/after structure. The verb choice 'designed' vs 'built' creates hierarchy while 'starting point' vs 'everything after' shows exponential impact from minimal input."
+      },
+      "transcript_id": "78520acf-cc5c-4cea-b87c-0b934bd2724c",
+      "source_title": "Measuring Our Work",
+      "source_date": "2026-01-15",
+      "entities": [],
+      "domain": "Airbnb",
+      "domain_id": "e8c7dfb8-2459-44be-aa60-a76cb5d9fccf",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "0b365dbd-9d1c-4f54-8053-d35323ec2bcb",
+      "created_at": "2026-04-08T21:53:32.182213+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "Discussing website updates and making communications 'look more like us'",
+        "use_it_for": "Design manifestos, creative briefs, or arguments for why motion matters in brand work",
+        "why_it_works": "Cross-domain bridge that reframes motion design from superficial add-on to fundamental communication language - elevates the craft by borrowing from linguistics"
+      },
+      "transcript_id": "8889ac07-e062-471c-9e08-8f815de5da82",
+      "source_title": "Residence Job Sync",
+      "source_date": "2026-01-16",
+      "entities": [],
+      "domain": "BUCK",
+      "domain_id": "6e874a96-57dd-4953-8dd0-b055375892d2",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "be9c8410-8f11-482c-9a64-83d49ae9610b",
+      "created_at": "2026-04-17T15:23:52.809604+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining how their 'share of culture' tool works with Verizon and can be replicated for other clients",
+        "use_it_for": "Business strategy writing, product development pieces, or any content about creating scalable solutions vs. custom work",
+        "why_it_works": "Perfect compression of a business model - the entire concept of creating scalable IP/frameworks in one sentence. Shows the leverage point between initial investment and ongoing value creation."
+      },
+      "transcript_id": "a2be5b4a-9c08-436d-8fd9-15ea9a02f9f0",
+      "source_title": "P+S Monthly Business Review",
+      "source_date": "2026-04-15",
+      "entities": [
+        "Jim Babb",
+        "Madison Wharton",
+        "Ben Langsfeld",
+        "Wade Milne"
+      ],
+      "domain": "Part + Sum",
+      "domain_id": "1a57e63b-90e1-4515-bf4d-11d379a1247e",
+      "contact_ids": [
+        "5b24b435-8b06-4cdc-bb5d-ff35661ca08b",
+        "09b64572-ded8-42f0-ac46-12512f55bc2d",
+        "dec97854-4431-467a-b802-9778df3e19ed",
+        "304e59ba-f15b-450e-b628-5a259f707a9f"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "247731bd-eb50-46fd-8944-a019987fb09f",
+      "created_at": "2026-04-08T21:59:15.304378+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "I think of it as scaffolding that kind of builds itself and then it falls away temporal. Like, the farther away it gets, the more it influences it less. Right. So you have this, like, swell of data contextualization that kind of moves with the project over time",
+        "context": "Explaining how his data analysis system weights recent information more heavily than older data, creating dynamic project intelligence",
+        "use_it_for": "Technical writing that needs to explain adaptive systems or temporal algorithms to non-technical stakeholders. Product vision documents.",
+        "why_it_works": "Philosophy capture through architectural metaphor. 'Scaffolding that builds itself' compresses the complex concept of temporal data weighting into a visual system. The 'swell' metaphor adds emotional register to what could be dry technical description."
+      },
+      "transcript_id": "eabea5e6-aa36-45df-8d32-9a5e26c98c4a",
+      "source_title": "Ben / Nick",
+      "source_date": "2026-01-27",
+      "entities": [
+        "Ben Langsfeld",
+        "Nick Carmen"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed",
+        "96b5f6bd-a882-48c5-ad77-a222872d2949"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "47931b91-a677-45cf-ab82-e0ce93e7de59",
+      "created_at": "2026-04-08T22:01:12.74227+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how to present work to Nick and Emily, realizing they prefer finished products over process",
+        "use_it_for": "Agency positioning pieces, client relationship articles, or any writing about creative collaboration and boundaries",
+        "why_it_works": "Perfect compression \u2014 takes the entire dynamic of client autonomy vs. agency control and collapses it into one clean handoff metaphor. The word 'starting point' reframes their role from controllers to catalysts."
+      },
+      "transcript_id": "22f3536e-72ab-4097-a5d6-04a44391018a",
+      "source_title": "Ai Pod",
+      "source_date": "2026-01-28",
+      "entities": [],
+      "domain": "BUCK",
+      "domain_id": "6e874a96-57dd-4953-8dd0-b055375892d2",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "b289fc15-abfe-48e1-84f1-93e15aeed423",
+      "created_at": "2026-04-08T22:10:00.325623+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how to frame Buck's role in JP Morgan's broader transformation - avoiding the trap of claiming credit for work done by others while still showing impact",
+        "use_it_for": "Case studies where you want to show strategic influence without overstating scope, or when positioning for expanded relationships rather than project completion",
+        "why_it_works": "Compression that reframes agency contribution from 'we did everything' to 'we enabled everything' - shifts from claiming ownership to claiming catalytic power, which is more credible and positions for ongoing partnership"
+      },
+      "transcript_id": "e00cd1d0-1b61-485a-bc9a-941e686c71e1",
+      "source_title": "(INT) JP Case study kick off session",
+      "source_date": "2026-02-03",
+      "entities": [],
+      "domain": "JPMorgan",
+      "domain_id": "7f6b45d0-b25d-41c5-9e40-a686b453c9f2",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "d17de42a-4a82-4c50-b8e5-61c454397b08",
+      "created_at": "2026-04-08T22:11:17.132546+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "I think of it as scaffolding for the way to make her feel trusted, you know, or for us to feel trusted. By her, you know?",
+        "context": "Responding to team concerns about the creepy implications of psychological client profiling by repositioning the tool's purpose",
+        "use_it_for": "Explaining controversial or sensitive technology implementations to stakeholders who might be wary of data collection or AI analysis",
+        "why_it_works": "Philosophy capture that reframes potentially invasive client profiling as supportive infrastructure. The metaphor of 'scaffolding' transforms surveillance into service, making the tool feel constructive rather than extractive."
+      },
+      "transcript_id": "f3cbf840-b09d-438e-b7b4-449cf5946914",
+      "source_title": "Ai Pod",
+      "source_date": "2026-02-04",
+      "entities": [
+        "Ben Langsfeld",
+        "Thomas Ragger"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed",
+        "e0017514-a230-4067-9e85-b0ce50dd2673"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "a6787ccf-23fe-4ac1-aaa4-89f81bae17df",
+      "created_at": "2026-04-08T22:13:47.99604+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how the collaboration playbook was created but never evolved or got adopted by the teams who were supposed to use it",
+        "use_it_for": "Explaining scope boundaries in client work, setting expectations about deliverables vs. implementation, or defending work that went sideways after handoff",
+        "why_it_works": "Perfect compression that reframes ownership and responsibility - takes a complex collaboration failure and distills it into a clean handoff metaphor that absolves while acknowledging limits"
+      },
+      "transcript_id": "2ecbb829-fe4d-4758-b073-f732723d9682",
+      "source_title": "(INT) Ben / Daniel / Ryan Residence weekly working session",
+      "source_date": "2026-02-05",
+      "entities": [
+        "Max Vogel",
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "d3d95bb8-8fc8-40cb-9275-6b797b5728b1",
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "369c7ba9-7e93-467e-9414-36ebce525042",
+      "created_at": "2026-04-08T22:17:20.390125+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "I think of it as scaffolding.",
+        "context": "Responding to concerns that the campaign pod's work looked too much like general new business rather than solving specific campaign challenges. Used to defend the foundational work as necessary infrastructure.",
+        "use_it_for": "Process or methodology pieces where you need to justify foundational work that might seem administrative. Perfect for explaining why systems thinking matters before execution.",
+        "why_it_works": "Philosophy capture that transforms abstract process work into something tangible and structural. The metaphor of scaffolding implies temporary support that enables something permanent to be built, which reframes the pod's foundational work as essential infrastructure rather than bureaucratic overhead."
+      },
+      "transcript_id": "3202ef35-5b08-4fcd-bbb7-2bcb33cdc9cd",
+      "source_title": "Residence Exec Weekly",
+      "source_date": "2026-02-09",
+      "entities": [
+        "Madison Wharton",
+        "Orion Tait"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "09b64572-ded8-42f0-ac46-12512f55bc2d",
+        "89ec14b2-95a7-4cca-9a76-da6be2e199bf"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "6a62df42-93da-4cb5-ae4b-b3d08509c085",
+      "created_at": "2026-04-08T22:27:05.433485+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "This quote does not appear in the provided transcript. The transcript contains only 'Them:' speakers presenting a sales dashboard walkthrough with no 'You:' responses.",
+        "use_it_for": "Explaining scope boundaries in project retrospectives, client communications about deliverable handoffs, or team role clarification documents",
+        "why_it_works": "This is a compression technique that collapses a complex handoff dynamic into one clean sentence. The parallel structure ('We designed'/'They built') creates clarity about ownership boundaries while 'starting point' reframes their contribution as foundational rather than complete."
+      },
+      "transcript_id": "f2670dcf-5589-4295-8434-41fe45ad3058",
+      "source_title": "Sales Dashboard",
+      "source_date": "2026-02-18",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "cf2361b4-ce84-45f5-928b-e15670d4856f",
+      "created_at": "2026-04-08T22:27:28.583126+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Responding to a question about how the brand system helped onboard other partners and maintain quality",
+        "use_it_for": "Explaining the value of foundational brand systems work to clients who might see it as 'just guidelines' - shows how systems enable rather than constrain",
+        "why_it_works": "Perfect compression of the systems thinking approach - distinguishes between creating foundational architecture versus executing within it. Shows the difference between strategic design and tactical execution."
+      },
+      "transcript_id": "d80fd955-e80c-43d8-bc58-d28a3eb5c750",
+      "source_title": "(EXT) Karina x BUCK case study interview ",
+      "source_date": "2026-02-18",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "4e549526-d2e6-4e99-96dd-81ac5f450cab",
+      "created_at": "2026-04-08T22:27:28.583126+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "Discussing how the motion system they created gave teams shared language and better capability to evaluate work",
+        "use_it_for": "Presentations about motion design systems, or any time you need to elevate a design element from tactical to strategic",
+        "why_it_works": "Cross-domain bridge that reframes motion graphics from superficial add-on to core brand language. 'Dialect' implies systematic rules, cultural meaning, and learnable structure."
+      },
+      "transcript_id": "d80fd955-e80c-43d8-bc58-d28a3eb5c750",
+      "source_title": "(EXT) Karina x BUCK case study interview ",
+      "source_date": "2026-02-18",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "d2eb2fc9-28be-4e5d-a182-28a819a67b5f",
+      "created_at": "2026-04-08T22:27:28.583126+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "I think of it as scaffolding.",
+        "context": "Explaining her philosophy of brand evolution versus disruption at a 200-year-old institution",
+        "use_it_for": "Positioning work for heritage brands or when you need to show respect for existing equity while enabling evolution",
+        "why_it_works": "Philosophy capture that makes her approach to brand stewardship tangible. Scaffolding supports construction but isn't permanent - shows respect for the brand's longevity beyond her tenure."
+      },
+      "transcript_id": "d80fd955-e80c-43d8-bc58-d28a3eb5c750",
+      "source_title": "(EXT) Karina x BUCK case study interview ",
+      "source_date": "2026-02-18",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "b7d3f8ad-bc0c-447c-9ef1-36be1b8f2131",
+      "created_at": "2026-04-08T22:27:51.929774+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining how the agency jumped to creative territories without developing the strategic platform first",
+        "use_it_for": "Explaining creative process breakdowns or when discussing the critical transition from strategy to execution",
+        "why_it_works": "Perfect compression of agency relationship dynamics - captures the handoff moment where strategy becomes execution, and implies the gap between intention and output"
+      },
+      "transcript_id": "401f36d7-43c4-484d-aff2-4debaa053d92",
+      "source_title": "BUCK x Freedom Brand Time",
+      "source_date": "2026-02-18",
+      "entities": [],
+      "domain": "JPMorgan",
+      "domain_id": "7f6b45d0-b25d-41c5-9e40-a686b453c9f2",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "da37f78c-8b29-462f-86fb-431b31169743",
+      "created_at": "2026-04-08T22:33:44.219678+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining how Buck's balloon designs for the Bamboo campaign expanded from initial concepts to a full toolkit when the client loved their work",
+        "use_it_for": "Describing creative partnerships, agency-client relationships, or any collaborative work where you need to clarify contributions without taking credit for everything",
+        "why_it_works": "Perfect compression of scope and ownership. Distinguishes initial creative contribution from execution without diminishing either party's role. The period creates finality."
+      },
+      "transcript_id": "bc50acbf-0443-4efd-a5fd-71fc05e7499f",
+      "source_title": "BUCK Global Company Meeting (Feb 2026)",
+      "source_date": "2026-02-23",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "9ad412a7-887b-4fe7-9b99-ce4b55ae9e03",
+      "created_at": "2026-04-08T22:34:10.695973+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining Buck's role in projects where they provide initial creative direction and others handle the broader campaign execution",
+        "use_it_for": "Pieces about creative process, client relationships, or the handoff between strategy and execution. Great for explaining the value of foundational creative work.",
+        "why_it_works": "Perfect compression of creative collaboration - distinguishes between initial vision and execution without diminishing either role. The word 'starting point' reframes creative work as catalyst rather than finished product."
+      },
+      "transcript_id": "ed69b470-05a7-41d0-aca6-8d2b45719655",
+      "source_title": "Bob Stetson",
+      "source_date": "2026-02-23",
+      "entities": [
+        "Orion Tait",
+        "Kevin Walker",
+        "Daniell Phillips",
+        "Madison Wharton",
+        "Ben Langsfeld",
+        "Tarley Jordan"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "89ec14b2-95a7-4cca-9a76-da6be2e199bf",
+        "b7a42ef9-b28e-4b87-a362-0af045c74095",
+        "5591af68-f013-4ca3-9f39-82172de1714b",
+        "09b64572-ded8-42f0-ac46-12512f55bc2d",
+        "dec97854-4431-467a-b802-9778df3e19ed",
+        "219043f8-2931-4742-b800-384f9a6e1c49"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "a162d219-7eb0-4598-9aff-847b5ef2e1f8",
+      "created_at": "2026-04-08T22:34:10.695973+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "Discussing the role of motion graphics and animation in Buck's creative work - positioning it as meaningful communication rather than aesthetic enhancement",
+        "use_it_for": "Design writing, creative process pieces, or arguments about the strategic value of animation and motion graphics in brand communication.",
+        "why_it_works": "Cross-domain bridge that maps language concepts onto design. 'Dialect' suggests motion has grammar, rules, and meaning-making capacity, elevating it from mere visual flourish to communication tool."
+      },
+      "transcript_id": "ed69b470-05a7-41d0-aca6-8d2b45719655",
+      "source_title": "Bob Stetson",
+      "source_date": "2026-02-23",
+      "entities": [
+        "Orion Tait",
+        "Kevin Walker",
+        "Daniell Phillips",
+        "Madison Wharton",
+        "Ben Langsfeld",
+        "Tarley Jordan"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "89ec14b2-95a7-4cca-9a76-da6be2e199bf",
+        "b7a42ef9-b28e-4b87-a362-0af045c74095",
+        "5591af68-f013-4ca3-9f39-82172de1714b",
+        "09b64572-ded8-42f0-ac46-12512f55bc2d",
+        "dec97854-4431-467a-b802-9778df3e19ed",
+        "219043f8-2931-4742-b800-384f9a6e1c49"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "219b7a25-5ca2-4e31-b83e-d42904868121",
+      "created_at": "2026-04-08T22:36:04.915395+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "Not present in this transcript - this appears to be an example quote",
+        "use_it_for": "Design philosophy pieces, creative briefs, or arguments about the strategic value of animation and motion graphics",
+        "why_it_works": "Compression that reframes motion design from aesthetic choice to communication method. The alliteration makes it sticky, and 'dialect' suggests motion has grammar and meaning rather than just visual appeal."
+      },
+      "transcript_id": "f8b97d93-cdb5-4fad-95c9-df0ca93c8f33",
+      "source_title": "[INT] Residence Comms x wild",
+      "source_date": "2026-02-24",
+      "entities": [
+        "Tarley Jordan",
+        "Felix H\u00e4usler"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "219043f8-2931-4742-b800-384f9a6e1c49",
+        "e543d042-d19f-4672-b94e-d6fe697cbbde"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "29043124-7f7c-4d00-aa3a-5f4e835a36af",
+      "created_at": "2026-04-18T11:51:11.612645+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Describing how delivering both traditional brand guidelines and AI-ready brand protocols creates warm introductions to other services",
+        "use_it_for": "Agency positioning, client presentations about strategic value, or any piece about the difference between execution and enablement",
+        "why_it_works": "Reframes the agency relationship from 'we do everything' to 'we create the foundation for infinite possibility.' Shifts from service provider to catalyst."
+      },
+      "transcript_id": "3b1eb6c7-94ea-471b-846c-3b9286cc6832",
+      "source_title": "Ryan x Ben x Kevin",
+      "source_date": "2026-04-17",
+      "entities": [
+        "Kevin Walker",
+        "Ryan Honey"
+      ],
+      "domain": "BUCK",
+      "domain_id": "6e874a96-57dd-4953-8dd0-b055375892d2",
+      "contact_ids": [
+        "b7a42ef9-b28e-4b87-a362-0af045c74095",
+        "03331a9c-8032-498a-9882-8d7e37048f33"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "77a4e7a5-4035-41d7-bca7-d7560068fa04",
+      "created_at": "2026-04-08T22:40:48.805766+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "This quote doesn't appear in the transcript - the user appears to have provided an example format rather than actual transcript content to extract from.",
+        "use_it_for": "Project retrospectives, client presentations explaining scope boundaries, or any piece about the handoff between strategy and execution",
+        "why_it_works": "This is a perfect compression that collapses the entire relationship between foundational work and subsequent development into one clean sentence. It establishes clear ownership boundaries while acknowledging collaborative evolution."
+      },
+      "transcript_id": "da597c84-907b-4bce-8bf8-2c10dd4c6b06",
+      "source_title": "Wild & BUCK | Attio Walkthrough",
+      "source_date": "2026-02-25",
+      "entities": [],
+      "domain": "BUCK",
+      "domain_id": "6e874a96-57dd-4953-8dd0-b055375892d2",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "715d05e1-5053-42b2-87e7-c63f490ab642",
+      "created_at": "2026-04-08T22:46:39.707098+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "I think of it as scaffolding.",
+        "context": "Describing his approach to the new CCO role and how he wants to empower rather than direct the network",
+        "use_it_for": "Leadership philosophy pieces, management frameworks, or organizational design arguments",
+        "why_it_works": "Philosophy capture through construction metaphor. Scaffolding is temporary, supportive, enables building something bigger - perfectly captures his view of leadership as enabling rather than controlling."
+      },
+      "transcript_id": "be1811f5-436b-46cc-8e4d-3eca640cc0f2",
+      "source_title": "Darren Gold (Trium) | Ben Langsfeld (Chief Creative Officer @ Residence): Gaining Your Perspective ",
+      "source_date": "2026-02-27",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "c9453e2b-4d08-4b6a-8cbc-1815b059549d",
+      "created_at": "2026-04-08T22:47:00.854595+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "Discussing the 12 Matcha brand where motion behavior felt integral to the brand's expression of effervescence",
+        "use_it_for": "Design manifestos, motion design critiques, or arguments about systematic thinking in brand expression",
+        "why_it_works": "Cross-domain bridge that reframes motion design from surface treatment to fundamental language system. The metaphor of 'dialect' suggests motion has grammar, syntax, and cultural specificity rather than being mere visual flourish."
+      },
+      "transcript_id": "bf30c9ac-853c-4342-80d8-3a8d66d1dc3f",
+      "source_title": "Creative Review Annual Awards Judging - DESIGN",
+      "source_date": "2026-03-02",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "663328bb-2a1d-438d-ae40-b88c7390ea86",
+      "created_at": "2026-04-08T22:47:00.854595+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Evaluating whether work showed complete brand systems versus one-off executions",
+        "use_it_for": "Explaining brand identity methodology, defending systematic approaches, or discussing the difference between campaigns and identities",
+        "why_it_works": "Compression that captures the essence of brand identity work - creating systems that live beyond the initial touchpoints. Distinguishes between designing assets versus designing capacity."
+      },
+      "transcript_id": "bf30c9ac-853c-4342-80d8-3a8d66d1dc3f",
+      "source_title": "Creative Review Annual Awards Judging - DESIGN",
+      "source_date": "2026-03-02",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "08b04bff-2ba6-4881-8c48-b20747109562",
+      "created_at": "2026-04-08T22:47:00.854595+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "I think of it as scaffolding.",
+        "context": "Discussing brand identity systems and whether speculative applications were valid expressions of brand potential",
+        "use_it_for": "Explaining design process, defending iterative work, or discussing how concepts support final execution",
+        "why_it_works": "Philosophy capture that makes the temporary-yet-essential nature of design process tangible. Scaffolding is both structural and removable - it enables the real thing to be built."
+      },
+      "transcript_id": "bf30c9ac-853c-4342-80d8-3a8d66d1dc3f",
+      "source_title": "Creative Review Annual Awards Judging - DESIGN",
+      "source_date": "2026-03-02",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "b628e9b9-652d-4cc3-b651-fd8b085fd5af",
+      "created_at": "2026-04-08T22:51:17.31165+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Responding to seeing their original proposal compared to the final work that came out of the JPM project",
+        "use_it_for": "Case studies or client testimonials where you need to position the agency's role as strategic foundation rather than execution-heavy",
+        "why_it_works": "Compression technique that collapses the entire agency-client relationship into one clean handoff metaphor. The verb choice 'designed' vs 'built' creates a clear division of labor that feels collaborative rather than territorial."
+      },
+      "transcript_id": "7426e80d-8023-4033-806c-b2f35278bfd9",
+      "source_title": "(INT) Ben / Daniel / Ryan Residence weekly working session",
+      "source_date": "2026-03-03",
+      "entities": [
+        "Ben Langsfeld",
+        "Daniell Phillips"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed",
+        "5591af68-f013-4ca3-9f39-82172de1714b"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "be07a782-d1be-47b1-94eb-dfaa51ba3221",
+      "created_at": "2026-04-08T22:57:02.655966+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how Buck delivered a brand strategy to Chase that the client then executed across their entire ecosystem",
+        "use_it_for": "Case studies, client presentations, or any piece explaining creative process and client empowerment",
+        "why_it_works": "Perfect compression of agency-client relationship dynamics - collapses the entire handoff process and ownership transfer into one clean sentence that reframes who owns what"
+      },
+      "transcript_id": "06bb0519-7b9f-4e21-815a-3da8d74bca29",
+      "source_title": "(INT) Ben / Daniel / Ryan Residence weekly working session",
+      "source_date": "2026-03-05",
+      "entities": [
+        "Daniell Phillips"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "5591af68-f013-4ca3-9f39-82172de1714b"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "7af13adc-6480-4ee4-96d9-1c805d347ad9",
+      "created_at": "2026-04-08T22:58:18.021861+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining how their work with clients creates the foundation that clients then build upon, rather than delivering finished solutions.",
+        "use_it_for": "Describing the role of strategy, creative direction, or foundational work in any collaborative process. Works for client case studies or team role definitions.",
+        "why_it_works": "Perfect compression that captures the relationship between strategic foundation and execution. The temporal split ('designed' vs 'built') and the handoff ('starting point' to 'everything after') shows both ownership and humility."
+      },
+      "transcript_id": "f2b45ce1-6e59-4459-9dbc-05f3e3659873",
+      "source_title": "Jay / Ben",
+      "source_date": "2026-03-06",
+      "entities": [
+        "Jay Grandin"
+      ],
+      "domain": "BUCK",
+      "domain_id": "6e874a96-57dd-4953-8dd0-b055375892d2",
+      "contact_ids": [
+        "4c329a3f-59c9-4440-b77d-2c2cbc2820e5"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "1eacba5a-77a6-47a4-a680-1201bc9c2958",
+      "created_at": "2026-04-08T23:00:43.663671+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Not present in this transcript - this appears to be an example quote",
+        "use_it_for": "Case studies, client testimonials, or any piece explaining collaborative creative work where you need to show value without taking credit for execution",
+        "why_it_works": "Perfect compression \u2014 collapses the entire agency-client relationship dynamic into one sentence that clarifies ownership without diminishing either party's contribution"
+      },
+      "transcript_id": "252dbcff-8f64-4b97-bb3b-ee204781d2c0",
+      "source_title": "[INT] Residence Blacksmith Weekly Leads Check In",
+      "source_date": "2026-03-09",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "a915430f-ada9-4b96-8876-76048973938d",
+      "created_at": "2026-04-08T23:01:06.063055+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining the briefing approach - giving teams a simple framework to generate ideas quickly rather than getting bogged down in complex multi-threaded planning",
+        "use_it_for": "Case studies or project retrospectives where you need to show your foundational role without diminishing client contribution",
+        "why_it_works": "Compression technique that collapses the entire creative process into a clear division of labor. Uses past tense to establish completion and ownership while acknowledging the client's agency."
+      },
+      "transcript_id": "1fb9b769-c6e5-43b1-bd84-815b417c9c82",
+      "source_title": "(INT) Chase Freedom Pitch Kickoff (ATTEND) GONNA BE A GOOD TIME",
+      "source_date": "2026-03-09",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "c576a305-c0ad-4164-921e-d024c30405ad",
+      "created_at": "2026-04-08T23:01:51.183426+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining the collaborative nature of the JPMorgan project and how to frame their partnership in the case study",
+        "use_it_for": "Case study conclusions, capability statements, or any piece that needs to articulate the agency's strategic role without diminishing client contribution",
+        "why_it_works": "This is a compression that collapses the entire agency-client dynamic into one clean handoff. It positions the agency as architects of possibility rather than executors, elevating their role while giving the client ownership of outcomes."
+      },
+      "transcript_id": "4dce4266-dcb0-469c-8302-8cda8c7aff92",
+      "source_title": "[INT] Residence Blacksmith Cameron KO",
+      "source_date": "2026-03-10",
+      "entities": [],
+      "domain": "JPMorgan",
+      "domain_id": "7f6b45d0-b25d-41c5-9e40-a686b453c9f2",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "368820e9-ab3a-47cc-ad8c-35bc8127a414",
+      "created_at": "2026-04-08T23:04:08.631606+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "During discussion of technical capabilities and what's possible with their CMS, when considering the vision for a more consumer-friendly, retail-like experience",
+        "use_it_for": "Design arguments where you need to justify sophisticated interaction design to stakeholders who see it as unnecessary flourish. Works for any creative discipline defending craft decisions.",
+        "why_it_works": "Cross-domain bridge that maps language concepts onto design, elevating motion from aesthetic choice to communication system. 'Dialect' implies meaning, culture, and intentionality rather than surface treatment."
+      },
+      "transcript_id": "6f5c168b-57f7-44e0-8607-589b61896314",
+      "source_title": "Wild x Oscar Health Website Discovery / Exploration",
+      "source_date": "2026-03-11",
+      "entities": [],
+      "domain": "Wild",
+      "domain_id": "00d0e77a-b7a7-40c0-bb9c-97e2bdab7cee",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "74bc0306-dc27-43d9-8eb4-fcecf5191041",
+      "created_at": "2026-04-08T23:05:05.129336+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "Motion is a dialect, not decoration.",
+        "context": "Responding to discussion about anime's use of motion, smear frames, and how animation techniques communicate emotion and genre",
+        "use_it_for": "Design manifestos, creative briefs, or any piece arguing for intentional craft over surface aesthetics. Perfect for explaining why technical choices matter to non-technical audiences.",
+        "why_it_works": "Cross-domain bridge that reframes animation technique as language. Takes a technical concept (motion design) and maps it onto linguistics, making it immediately clear that movement carries meaning rather than just visual appeal."
+      },
+      "transcript_id": "745c8a31-e187-406e-acfd-c61b3d4e312a",
+      "source_title": "Crunchyroll",
+      "source_date": "2026-03-15",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "7e9b59f6-668a-41df-b1ac-4c4f66cfdc6c",
+      "created_at": "2026-04-08T23:05:05.129336+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing Crunchyroll's role as cultural curator versus content creator, and how brands can contribute to rather than exploit fandoms",
+        "use_it_for": "Case studies about platform design, community building pieces, or arguments about the role of brands in cultural movements. Useful when explaining collaborative creativity.",
+        "why_it_works": "Compression that captures the entire creative ecosystem in one breath. Distinguishes between platform creation and community generation without diminishing either role."
+      },
+      "transcript_id": "745c8a31-e187-406e-acfd-c61b3d4e312a",
+      "source_title": "Crunchyroll",
+      "source_date": "2026-03-15",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "eae3c965-ff5e-4979-ba9f-8a7cdfc78e2a",
+      "created_at": "2026-04-08T23:06:36.467865+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how their team approaches client relationships and creative ownership",
+        "use_it_for": "Client case studies, agency positioning pieces, or any writing about collaborative creative processes where you want to show restraint and empowerment",
+        "why_it_works": "Perfect compression that reframes agency relationship dynamics - collapses the entire creative partnership model into one clean handoff metaphor that shifts ownership and credit"
+      },
+      "transcript_id": "2827df16-4f1b-4923-8b8d-4c590710c7a9",
+      "source_title": "Weekly Ben/Julian Comms Connect",
+      "source_date": "2026-03-16",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "0965f81d-7e0f-4e1f-8b49-09fdd0ca6116",
+      "created_at": "2026-04-21T12:10:27.150272+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining the scope and impact of the massive Chase Freedom style guide project and how it enabled broader organizational capabilities.",
+        "use_it_for": "Case studies, capability statements, or any piece positioning creative work as strategic foundation rather than tactical execution. Useful for elevating the perceived value of design work.",
+        "why_it_works": "Compression that reframes the agency's role from service provider to foundation-setter. Shifts the narrative from 'we executed their vision' to 'we enabled their success' - a much more strategic positioning."
+      },
+      "transcript_id": "0580d98e-e412-441d-941e-1c40bcc8ca85",
+      "source_title": "(INT) Bi-Weekly Integrated Leads JPM/C/Chase work streams (Residence Companies)",
+      "source_date": "2026-04-20",
+      "entities": [
+        "Ryan Castaldo",
+        "Russell Greene"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "b46d79c7-4026-4a28-b6d3-0244beae6cb0",
+        "f01e4279-0f9d-43b8-a584-e48d1bf4e4cf"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "6fc29ef2-1425-4015-b331-f43c8b90579d",
+      "created_at": "2026-04-08T23:11:53.958392+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining how their network of companies works together and what they provide to clients",
+        "use_it_for": "Positioning creative work, explaining collaborative processes, or any argument about influence vs. control",
+        "why_it_works": "Compression that reframes agency role from service provider to catalyst. Shifts power dynamic by positioning the work as enablement rather than execution, making the client the hero of their own story."
+      },
+      "transcript_id": "c69c4658-8958-4e75-96bb-7c4c6e467e1c",
+      "source_title": "CONFIRMED Details below: CHASE MEETING (zoom info below)",
+      "source_date": "2026-03-20",
+      "entities": [],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "3651b036-7aa9-4ecd-b93b-2de1b4d13560",
+      "created_at": "2026-04-08T23:13:02.094635+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing cost analysis and agency model comparison - repositioning their role from traditional retained agency to strategic foundation builders",
+        "use_it_for": "Client case studies, agency positioning pieces, or any writing about creative partnerships where you want to show strategic value over tactical delivery",
+        "why_it_works": "Compression that reframes agency relationship from service provider to foundation-setter. Collapses complex ongoing partnership into clean handoff metaphor that positions the work as generative rather than executional."
+      },
+      "transcript_id": "8d8189c5-0a84-40d5-a6df-f11a7e0b298d",
+      "source_title": "(EXT) Karina x Russell x Ryan ",
+      "source_date": "2026-03-20",
+      "entities": [],
+      "domain": "JPMorgan",
+      "domain_id": "7f6b45d0-b25d-41c5-9e40-a686b453c9f2",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "d72c0fb4-741d-4034-aa15-5a9f68a12174",
+      "created_at": "2026-04-08T23:16:43.927738+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how to frame collaborative work between companies without taking too much or too little credit",
+        "use_it_for": "Explaining partnership dynamics, creative processes, or any situation where you need to show how initial work enables larger outcomes. Great for case studies or capability descriptions.",
+        "why_it_works": "Perfect compression of a collaborative relationship into two sentences. The parallel structure ('We designed'/'They built') and the temporal sequence ('starting point'/'everything after') captures both the handoff and the scale difference."
+      },
+      "transcript_id": "fe14ee26-df84-4242-9174-5fd9149c01e6",
+      "source_title": "Ben / Daniell",
+      "source_date": "2026-03-23",
+      "entities": [],
+      "domain": "Acronym",
+      "domain_id": "6680567a-5fd2-44bc-a9fb-edf737588efd",
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "ff2a43fe-2393-4e4b-918b-fd0bd5dbe51b",
+      "created_at": "2026-04-08T23:18:32.840939+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing their approach to IP development and how they work with partners rather than doing everything in-house",
+        "use_it_for": "Positioning pieces where you need to claim strategic ownership without taking credit for execution. Useful for agency/consultant writing about client relationships.",
+        "why_it_works": "Perfect compression that reframes their role from full creators to strategic architects. Takes a complex development relationship and collapses it into a clear division of labor that elevates their contribution."
+      },
+      "transcript_id": "cabde803-da0f-4288-8f7b-0fd468ea7f98",
+      "source_title": "Animated movie project ideas",
+      "source_date": "2026-03-24",
+      "entities": [
+        "Orion Tait"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "89ec14b2-95a7-4cca-9a76-da6be2e199bf"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "67527ced-af0e-4494-979e-1e0ef28f50a7",
+      "created_at": "2026-04-08T23:19:26.458408+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Describing how their Chase pitch worked \u2014 they identified a gap, showed a new strategy, and the client wanted to buy it immediately",
+        "use_it_for": "Case studies, positioning statements, or any piece explaining the difference between strategic partnership and vendor relationship",
+        "why_it_works": "Perfect compression \u2014 collapses the entire client relationship and value proposition into one sentence that reframes agency work from 'doing everything' to 'enabling everything.' The metaphor of 'starting point' positions them as catalysts rather than executors."
+      },
+      "transcript_id": "8b887789-2bd7-43fb-a205-23eef6f2fb4b",
+      "source_title": "Ben x Will",
+      "source_date": "2026-03-25",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "915206ed-b814-448f-86fd-a5b64a5f46d0",
+      "created_at": "2026-04-08T23:24:17.060966+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "I like to think of it as scaffolding.",
+        "context": "Describing the Language and Thinking program as a high school to college bridge - explaining how a 3-week orientation program functions",
+        "use_it_for": "Educational writing about transition programs, onboarding processes, or any system designed to provide temporary support for permanent growth",
+        "why_it_works": "This metaphor transforms an abstract educational concept into something tangible and structural. It suggests temporary support that enables building something permanent - exactly what a bridge program should do. The construction metaphor also implies intentional design and eventual independence."
+      },
+      "transcript_id": "bdbbb5f5-7505-406f-949d-f13a27045a6b",
+      "source_title": "Bard College Visit ",
+      "source_date": "2026-03-30",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "06383ad0-deb7-4b90-a1eb-340fac764bd5",
+      "created_at": "2026-04-08T23:26:27.326996+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining UVM's approach to student support and development during the informational presentation",
+        "use_it_for": "Educational philosophy pieces, leadership writing, or any argument about scaffolding vs. independence - works for parenting, mentorship, or organizational development contexts",
+        "why_it_works": "Perfect compression of institutional philosophy into one sentence - captures the balance between providing structure and enabling student agency, avoiding both hand-holding and abandonment"
+      },
+      "transcript_id": "3de5b3ff-15d1-41b3-916e-f71f40131a3a",
+      "source_title": "UVM Visit",
+      "source_date": "2026-04-01",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "8a2ed462-47fb-46f0-b9a9-920701029e7e",
+      "created_at": "2026-04-08T23:31:43.248558+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining how the JPMorgan/Blackstone work evolved from internal case study to client pitch, justifying budget reallocation",
+        "use_it_for": "Project retrospectives, client communications about scope changes, or explaining why additional work fell outside original parameters",
+        "why_it_works": "This is a compression that collapses a complex project handoff into a clear division of labor - distinguishing between foundational work and execution while avoiding blame"
+      },
+      "transcript_id": "598c8f08-d259-4ad8-aa81-b53e2f2c7ce1",
+      "source_title": "Ben x Daniell x Mon - Nest Sync",
+      "source_date": "2026-04-07",
+      "entities": [
+        "Ben Langsfeld"
+      ],
+      "domain": "Ok Cool",
+      "domain_id": "106e9fdc-0503-465a-b92a-9ad59476e450",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "4c6af0b6-0a2d-4e44-b6d1-ae7e40f876c7",
+      "created_at": "2026-04-08T23:34:35.711449+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining the difference between strategic consultation and full-service delivery",
+        "use_it_for": "Case studies, client testimonials, or positioning statements where you need to show strategic value without claiming credit for execution",
+        "why_it_works": "Perfect compression of a complex client relationship into one clean sentence that reframes agency work from 'we did everything' to 'we set the foundation for their success'"
+      },
+      "transcript_id": "88bbf61c-4a5f-444f-b23b-f69f1178e8eb",
+      "source_title": "Business Plan Review: ACX ",
+      "source_date": "2026-04-07",
+      "entities": [
+        "Wade Milne"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "304e59ba-f15b-450e-b628-5a259f707a9f"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "d31d2f50-9656-422a-95e2-0180a9abf44c",
+      "created_at": "2026-04-08T23:35:43.738711+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Explaining how residence companies collaborate with clients - they provide strategic foundation, clients handle the build-out",
+        "use_it_for": "Case studies, client presentations, or any piece explaining the division of labor between strategy and implementation teams",
+        "why_it_works": "Compression technique that collapses the entire consulting relationship into one sentence. Takes the complex dynamic of strategy-to-execution handoff and makes it feel inevitable and clean."
+      },
+      "transcript_id": "b7c70d92-e4a9-41bb-81a5-a36b8971934d",
+      "source_title": "Ben L / Jose Bi-Weekly",
+      "source_date": "2026-04-08",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "fb95ae5b-d0aa-424d-a65a-1c0ffa8f23db",
+      "created_at": "2026-04-08T23:36:28.278765+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing how their team's work gets built upon by others in the network",
+        "use_it_for": "Agency case studies, creative briefs, or any piece where you need to explain the handoff between strategy/concept and execution. Works especially well when addressing scope creep or creative ownership questions.",
+        "why_it_works": "Perfect compression technique - takes a complex creative process and collapses it into a clear division of labor. The metaphor of 'starting point' positions their work as foundational rather than complete, which manages expectations while claiming credit for the creative DNA."
+      },
+      "transcript_id": "8e1cebd1-b78f-4320-81fc-0e8904ee15bf",
+      "source_title": "(INT) Residence Trio Weekly",
+      "source_date": "2026-04-08",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "6134a3d2-a813-48c7-a152-68c1d184b5ae",
+      "created_at": "2026-04-10T20:19:55.196543+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "You designed a starting point. They built everything after it.",
+        "context": "Responding to Rags describing how Wild is moving from traditional agency work to helping clients navigate AI transformation",
+        "use_it_for": "Positioning pieces about evolving service models, or arguments about moving from deliverables to enablement",
+        "why_it_works": "Compression that reframes the entire agency-client relationship from 'we make things' to 'we enable making.' Takes a complex shift in positioning and collapses it into one clear before/after dynamic."
+      },
+      "transcript_id": "8ccbfe3f-59af-4b68-889b-094ba1671c39",
+      "source_title": "Wild AI Positioning",
+      "source_date": "2026-04-10",
+      "entities": [],
+      "domain": null,
+      "domain_id": null,
+      "contact_ids": [],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "0fe6cc3b-62f5-452e-9ffd-d6447664a959",
+      "created_at": "2026-04-17T15:16:10.255882+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Not present in this transcript - this appears to be an example format",
+        "use_it_for": "Explaining creative strategy roles, positioning statements, or describing foundational work that enables others",
+        "why_it_works": "Perfect compression of complex creative process into one clean sentence. Uses past tense to establish sequence and ownership without claiming credit for execution."
+      },
+      "transcript_id": "c51c39fe-c6ea-42b8-871e-ec847dd358cc",
+      "source_title": "Residence Exec Weekly",
+      "source_date": "2026-04-13",
+      "entities": [
+        "Wade Milne",
+        "Ryan Honey",
+        "Madison Wharton",
+        "Wade Milne",
+        "Madison Wharton"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "304e59ba-f15b-450e-b628-5a259f707a9f",
+        "03331a9c-8032-498a-9882-8d7e37048f33",
+        "09b64572-ded8-42f0-ac46-12512f55bc2d",
+        "304e59ba-f15b-450e-b628-5a259f707a9f",
+        "09b64572-ded8-42f0-ac46-12512f55bc2d"
+      ],
+      "archived": false,
+      "saved": false
+    },
+    {
+      "id": "ae4805a7-8112-4618-8493-27e15487c544",
+      "created_at": "2026-04-17T15:16:59.246692+00:00",
+      "type": "voice",
+      "content": {
+        "quote": "We designed a starting point. They built everything after it.",
+        "context": "Discussing Buck's role in the Crunchyroll rebrand with Markus",
+        "use_it_for": "Describing collaborative creative work where you provided the foundation but others executed the vision",
+        "why_it_works": "Perfect compression of a complex creative relationship into one clean sentence that captures both ownership and humility"
+      },
+      "transcript_id": "d0ed91af-a0ff-4bdc-bcdf-ccc5c5984eb2",
+      "source_title": "Markus / Ben",
+      "source_date": "2026-04-13",
+      "entities": [
+        "Ben Langsfeld",
+        "Ben Langsfeld"
+      ],
+      "domain": "Residence",
+      "domain_id": "a73d9461-229c-46c6-a708-e1656c31b51a",
+      "contact_ids": [
+        "dec97854-4431-467a-b802-9778df3e19ed",
+        "dec97854-4431-467a-b802-9778df3e19ed"
+      ],
+      "archived": false,
+      "saved": false
+    }
+  ],
+  "signal_entities": [
+    {
+      "id": "0a9cebaf-00cd-45c2-9e55-fb55261e30da",
+      "type": "voice",
+      "canonical_label": "I like to think of it as scaffolding.",
+      "canonical_key": "i like to think of it as scaffolding",
+      "aliases": [],
+      "first_seen": "2026-03-30",
+      "last_seen": "2026-03-30",
+      "mention_count": 1,
+      "distinct_context_count": 1,
+      "lifecycle_state": "first_appearance",
+      "state_transitions": [],
+      "domain": null,
+      "created_at": "2026-04-21T06:50:10.772761+00:00",
+      "updated_at": "2026-04-21T06:50:11.037+00:00",
+      "cadence_stats": {},
+      "dormant_flag": false,
+      "dormant_since": null
+    },
+    {
+      "id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "type": "voice",
+      "canonical_label": "Motion is a dialect, not decoration.",
+      "canonical_key": "motion is a dialect not decoration",
+      "aliases": [],
+      "first_seen": "2026-01-05",
+      "last_seen": "2026-03-15",
+      "mention_count": 8,
+      "distinct_context_count": 8,
+      "lifecycle_state": "crystallization",
+      "state_transitions": [
+        {
+          "at": "2026-01-16",
+          "to": "recurrence",
+          "from": "first_appearance",
+          "reason": "first_appearance\u2192recurrence (mentions=2, contexts=2)",
+          "mention_id": "4b9b55e2-7acb-4e81-b809-a23fbd4833d3"
+        },
+        {
+          "at": "2026-02-18",
+          "to": "crystallization",
+          "from": "recurrence",
+          "reason": "recurrence\u2192crystallization (mentions=3, contexts=3)",
+          "mention_id": "daf839a5-becd-4d4c-967d-5fc5872e3ac8"
+        },
+        {
+          "at": "2026-04-21",
+          "to": "crystallization",
+          "from": "crystallization",
+          "reason": "dormancy_flag: silent 37d vs median 6d",
+          "mention_id": null
+        }
+      ],
+      "domain": "Residence",
+      "created_at": "2026-04-21T06:20:24.055185+00:00",
+      "updated_at": "2026-04-22T00:08:11.647+00:00",
+      "cadence_stats": {
+        "n_gaps": 7,
+        "stddev_days": 9.9,
+        "last_gap_days": 4,
+        "median_gap_days": 6
+      },
+      "dormant_flag": true,
+      "dormant_since": "2026-04-21"
+    },
+    {
+      "id": "3a23cdca-4d86-477e-b728-dd720361bc9f",
+      "type": "voice",
+      "canonical_label": "I think of it as scaffolding.",
+      "canonical_key": "i think of it as scaffolding",
+      "aliases": [],
+      "first_seen": "2026-02-09",
+      "last_seen": "2026-03-02",
+      "mention_count": 4,
+      "distinct_context_count": 4,
+      "lifecycle_state": "retired",
+      "state_transitions": [
+        {
+          "at": "2026-02-18",
+          "to": "recurrence",
+          "from": "first_appearance",
+          "reason": "first_appearance\u2192recurrence (mentions=2, contexts=2)",
+          "mention_id": "d40606a6-abba-4f87-9c11-1e2cc7cf1f55"
+        },
+        {
+          "at": "2026-02-27",
+          "to": "crystallization",
+          "from": "recurrence",
+          "reason": "recurrence\u2192crystallization (mentions=3, contexts=3)",
+          "mention_id": "7a96de56-f4ca-402e-8d4c-b2759c848689"
+        },
+        {
+          "at": "2026-04-21",
+          "to": "crystallization",
+          "from": "crystallization",
+          "reason": "dormancy_flag: silent 50d vs median 9d",
+          "mention_id": null
+        },
+        {
+          "at": "2026-04-21",
+          "to": "retired",
+          "from": "crystallization",
+          "reason": "retired: silent since 2026-03-02, threshold 2026-03-10",
+          "mention_id": null
+        }
+      ],
+      "domain": "Residence",
+      "created_at": "2026-04-21T06:30:43.844579+00:00",
+      "updated_at": "2026-04-21T10:51:12.006+00:00",
+      "cadence_stats": {
+        "n_gaps": 3,
+        "stddev_days": 2.8,
+        "last_gap_days": 3,
+        "median_gap_days": 9
+      },
+      "dormant_flag": true,
+      "dormant_since": "2026-04-21"
+    },
+    {
+      "id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "type": "voice",
+      "canonical_label": "We designed a starting point. They built everything after it.",
+      "canonical_key": "we designed a starting point they built everything after it",
+      "aliases": [
+        "You designed a starting point. They built everything after it."
+      ],
+      "first_seen": "2026-01-15",
+      "last_seen": "2026-04-20",
+      "mention_count": 37,
+      "distinct_context_count": 37,
+      "lifecycle_state": "crystallization",
+      "state_transitions": [
+        {
+          "at": "2026-01-28",
+          "to": "recurrence",
+          "from": "first_appearance",
+          "reason": "first_appearance\u2192recurrence (mentions=2, contexts=2)",
+          "mention_id": "dfd9ce6b-7bfd-41cd-ac74-69fe68fefbe2"
+        },
+        {
+          "at": "2026-02-03",
+          "to": "crystallization",
+          "from": "recurrence",
+          "reason": "recurrence\u2192crystallization (mentions=3, contexts=3)",
+          "mention_id": "7c6685e0-2537-404a-a71c-728e3f204efd"
+        },
+        {
+          "at": "2026-04-21",
+          "to": "crystallization",
+          "from": "crystallization",
+          "reason": "merge_absorbed: You designed a starting point. They built everything after it. (confidence=0.92)",
+          "mention_id": null
+        }
+      ],
+      "domain": "Airbnb",
+      "created_at": "2026-04-21T06:23:40.894665+00:00",
+      "updated_at": "2026-04-22T00:08:14.243+00:00",
+      "cadence_stats": {
+        "n_gaps": 36,
+        "stddev_days": 3.2,
+        "last_gap_days": 3,
+        "median_gap_days": 2
+      },
+      "dormant_flag": false,
+      "dormant_since": null
+    },
+    {
+      "id": "8a709eb6-fbad-4707-9944-5efdac24cb2d",
+      "type": "voice",
+      "canonical_label": "I think of it as scaffolding that kind of builds itself and then it falls away temporal. Like, the farther away it gets, the more it influences it less. Right. So you have this, like, swell of data contextualization that kind of moves with the project over time",
+      "canonical_key": "i think of it as scaffolding that kind of builds itself and then it falls away temporal like the far",
+      "aliases": [],
+      "first_seen": "2026-01-27",
+      "last_seen": "2026-01-27",
+      "mention_count": 1,
+      "distinct_context_count": 1,
+      "lifecycle_state": "first_appearance",
+      "state_transitions": [],
+      "domain": "Residence",
+      "created_at": "2026-04-21T06:25:17.104677+00:00",
+      "updated_at": "2026-04-21T06:25:17.376+00:00",
+      "cadence_stats": {},
+      "dormant_flag": false,
+      "dormant_since": null
+    },
+    {
+      "id": "d459477a-2122-4697-9095-e2743171589d",
+      "type": "voice",
+      "canonical_label": "I think of it as scaffolding for the way to make her feel trusted, you know, or for us to feel trusted. By her, you know?",
+      "canonical_key": "i think of it as scaffolding for the way to make her feel trusted you know or for us to feel trusted",
+      "aliases": [],
+      "first_seen": "2026-02-04",
+      "last_seen": "2026-02-04",
+      "mention_count": 1,
+      "distinct_context_count": 1,
+      "lifecycle_state": "first_appearance",
+      "state_transitions": [],
+      "domain": "Residence",
+      "created_at": "2026-04-21T06:28:49.512924+00:00",
+      "updated_at": "2026-04-21T06:28:49.953+00:00",
+      "cadence_stats": {},
+      "dormant_flag": false,
+      "dormant_since": null
+    }
+  ],
+  "signal_entity_mentions": [
+    {
+      "id": "086b48c5-7f6e-4627-a49b-f299f54faa60",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "38f0761b-acb4-4553-99a4-d02d8e416cfa",
+      "transcript_id": "19b715ae-2bac-42c5-b4eb-d0b27630e755",
+      "source_date": "2026-01-05",
+      "source_title": "[INT] Anthropic Gaviota | Claude Session ",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [
+        "Hanna Stolarski",
+        "Justin",
+        "A Yeo",
+        "Surabhi Rathi",
+        "Emma Howcroft",
+        "HyungSoon Joo",
+        "Jenny Ko",
+        "Wesley Chen",
+        "Sylvia Witter"
+      ],
+      "created_at": "2026-04-21T06:20:24.164768+00:00"
+    },
+    {
+      "id": "11c74a55-8618-459a-bb93-b7b7130d9722",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "9359c826-befe-405f-9dfa-965dbc9bf4e1",
+      "transcript_id": "78520acf-cc5c-4cea-b87c-0b934bd2724c",
+      "source_date": "2026-01-15",
+      "source_title": "Measuring Our Work",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Ryan Castaldo",
+        "Jim Babb"
+      ],
+      "created_at": "2026-04-21T06:23:41.016915+00:00"
+    },
+    {
+      "id": "4b9b55e2-7acb-4e81-b809-a23fbd4833d3",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "0b365dbd-9d1c-4f54-8053-d35323ec2bcb",
+      "transcript_id": "8889ac07-e062-471c-9e08-8f815de5da82",
+      "source_date": "2026-01-16",
+      "source_title": "Residence Job Sync",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [
+        "Monica Lynn",
+        "Nick Terzich",
+        "Kim"
+      ],
+      "created_at": "2026-04-21T06:24:11.022927+00:00"
+    },
+    {
+      "id": "bd0540b8-4acf-494c-9c5d-50b92eaa2376",
+      "entity_id": "8a709eb6-fbad-4707-9944-5efdac24cb2d",
+      "atom_id": "247731bd-eb50-46fd-8944-a019987fb09f",
+      "transcript_id": "eabea5e6-aa36-45df-8d32-9a5e26c98c4a",
+      "source_date": "2026-01-27",
+      "source_title": "Ben / Nick",
+      "raw_label": "I think of it as scaffolding that kind of builds itself and then it falls away temporal. Like, the farther away it gets, the more it influences it less. Right. So you have this, like, swell of data contextualization that kind of moves with the project over time",
+      "people": [
+        "Nicholas Carmen"
+      ],
+      "created_at": "2026-04-21T06:25:17.222518+00:00"
+    },
+    {
+      "id": "dfd9ce6b-7bfd-41cd-ac74-69fe68fefbe2",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "47931b91-a677-45cf-ab82-e0ce93e7de59",
+      "transcript_id": "22f3536e-72ab-4097-a5d6-04a44391018a",
+      "source_date": "2026-01-28",
+      "source_title": "Ai Pod",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:26:36.259551+00:00"
+    },
+    {
+      "id": "7c6685e0-2537-404a-a71c-728e3f204efd",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "b289fc15-abfe-48e1-84f1-93e15aeed423",
+      "transcript_id": "e00cd1d0-1b61-485a-bc9a-941e686c71e1",
+      "source_date": "2026-02-03",
+      "source_title": "(INT) JP Case study kick off session",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:28:08.278774+00:00"
+    },
+    {
+      "id": "cce3b916-c8c5-4b53-8278-04c8a881130a",
+      "entity_id": "d459477a-2122-4697-9095-e2743171589d",
+      "atom_id": "d17de42a-4a82-4c50-b8e5-61c454397b08",
+      "transcript_id": "f3cbf840-b09d-438e-b7b4-449cf5946914",
+      "source_date": "2026-02-04",
+      "source_title": "Ai Pod",
+      "raw_label": "I think of it as scaffolding for the way to make her feel trusted, you know, or for us to feel trusted. By her, you know?",
+      "people": [],
+      "created_at": "2026-04-21T06:28:49.791293+00:00"
+    },
+    {
+      "id": "362058cf-3c31-4bfb-92c1-1a8ada47d164",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "a6787ccf-23fe-4ac1-aaa4-89f81bae17df",
+      "transcript_id": "2ecbb829-fe4d-4758-b073-f732723d9682",
+      "source_date": "2026-02-05",
+      "source_title": "(INT) Ben / Daniel / Ryan Residence weekly working session",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:29:25.524685+00:00"
+    },
+    {
+      "id": "533f3f9c-2604-412a-adec-ae54f8891806",
+      "entity_id": "3a23cdca-4d86-477e-b728-dd720361bc9f",
+      "atom_id": "369c7ba9-7e93-467e-9414-36ebce525042",
+      "transcript_id": "3202ef35-5b08-4fcd-bbb7-2bcb33cdc9cd",
+      "source_date": "2026-02-09",
+      "source_title": "Residence Exec Weekly",
+      "raw_label": "I think of it as scaffolding.",
+      "people": [],
+      "created_at": "2026-04-21T06:30:43.966097+00:00"
+    },
+    {
+      "id": "78fd754a-1455-4545-9ff4-1f2fb2f98d1a",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "6a62df42-93da-4cb5-ae4b-b3d08509c085",
+      "transcript_id": "f2670dcf-5589-4295-8434-41fe45ad3058",
+      "source_date": "2026-02-18",
+      "source_title": "Sales Dashboard",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Teresa Toews",
+        "Jay Grandin",
+        "Vincent Lammers",
+        "Emily Rickard",
+        "Chance Woodward",
+        "Justin Harris",
+        "Kitty Dillard",
+        "Kevin Walker",
+        "Kirsten Collabolletta",
+        "Daniell Phillips",
+        "Steve Day",
+        "Luisa Murray",
+        "Ryan McGrath",
+        "Barrett Brown",
+        "Kim Stephens",
+        "Daniel Oeffinger",
+        "Nicholas Carmen",
+        "Andrew Chan Gladstone",
+        "Ryan Castaldo",
+        "Rebecca Dell",
+        "Mackenzie Kuzman",
+        "Jenny Ko",
+        "Thomas Schmid",
+        "Michelle Fox",
+        "Jon Gorman",
+        "Alex Moulton",
+        "Evan Boehm",
+        "Monica Lynn",
+        "Eric Pautz"
+      ],
+      "created_at": "2026-04-21T06:32:58.406263+00:00"
+    },
+    {
+      "id": "c0abcb4b-3677-45ec-8115-17a984115fc9",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "b7d3f8ad-bc0c-447c-9ef1-36be1b8f2131",
+      "transcript_id": "401f36d7-43c4-484d-aff2-4debaa053d92",
+      "source_date": "2026-02-18",
+      "source_title": "BUCK x Freedom Brand Time",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:33:04.660789+00:00"
+    },
+    {
+      "id": "ba21f468-9141-4f66-9411-e3dee4695c8a",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "cf2361b4-ce84-45f5-928b-e15670d4856f",
+      "transcript_id": "d80fd955-e80c-43d8-bc58-d28a3eb5c750",
+      "source_date": "2026-02-18",
+      "source_title": "(EXT) Karina x BUCK case study interview ",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Ryan Castaldo",
+        "Tarley Jordan",
+        "Tina Surelia",
+        "Karina Vivas"
+      ],
+      "created_at": "2026-04-21T06:33:31.420956+00:00"
+    },
+    {
+      "id": "daf839a5-becd-4d4c-967d-5fc5872e3ac8",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "4e549526-d2e6-4e99-96dd-81ac5f450cab",
+      "transcript_id": "d80fd955-e80c-43d8-bc58-d28a3eb5c750",
+      "source_date": "2026-02-18",
+      "source_title": "(EXT) Karina x BUCK case study interview ",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [
+        "Ryan Castaldo",
+        "Tarley Jordan",
+        "Tina Surelia",
+        "Karina Vivas"
+      ],
+      "created_at": "2026-04-21T06:33:31.876843+00:00"
+    },
+    {
+      "id": "d40606a6-abba-4f87-9c11-1e2cc7cf1f55",
+      "entity_id": "3a23cdca-4d86-477e-b728-dd720361bc9f",
+      "atom_id": "d2eb2fc9-28be-4e5d-a182-28a819a67b5f",
+      "transcript_id": "d80fd955-e80c-43d8-bc58-d28a3eb5c750",
+      "source_date": "2026-02-18",
+      "source_title": "(EXT) Karina x BUCK case study interview ",
+      "raw_label": "I think of it as scaffolding.",
+      "people": [
+        "Ryan Castaldo",
+        "Tarley Jordan",
+        "Tina Surelia",
+        "Karina Vivas"
+      ],
+      "created_at": "2026-04-21T06:33:32.32291+00:00"
+    },
+    {
+      "id": "75c641bc-94cc-464d-ab11-f3cf9d345f21",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "da37f78c-8b29-462f-86fb-431b31169743",
+      "transcript_id": "bc50acbf-0443-4efd-a5fd-71fc05e7499f",
+      "source_date": "2026-02-23",
+      "source_title": "BUCK Global Company Meeting (Feb 2026)",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:35:06.855634+00:00"
+    },
+    {
+      "id": "c51b1e20-36cd-4691-91e6-5a5359cceaa6",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "9ad412a7-887b-4fe7-9b99-ce4b55ae9e03",
+      "transcript_id": "ed69b470-05a7-41d0-aca6-8d2b45719655",
+      "source_date": "2026-02-23",
+      "source_title": "Bob Stetson",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:35:37.925917+00:00"
+    },
+    {
+      "id": "28c796be-2c79-419c-9c85-89424e846e7d",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "a162d219-7eb0-4598-9aff-847b5ef2e1f8",
+      "transcript_id": "ed69b470-05a7-41d0-aca6-8d2b45719655",
+      "source_date": "2026-02-23",
+      "source_title": "Bob Stetson",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [],
+      "created_at": "2026-04-21T06:35:38.981986+00:00"
+    },
+    {
+      "id": "26c1bc1c-bec7-4f9f-ba8a-72a81ed2b07e",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "219b7a25-5ca2-4e31-b83e-d42904868121",
+      "transcript_id": "f8b97d93-cdb5-4fad-95c9-df0ca93c8f33",
+      "source_date": "2026-02-24",
+      "source_title": "[INT] Residence Comms x wild",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [],
+      "created_at": "2026-04-21T06:36:20.722962+00:00"
+    },
+    {
+      "id": "5899cfcd-7da5-4599-9f84-321f595c03e1",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "77a4e7a5-4035-41d7-bca7-d7560068fa04",
+      "transcript_id": "da597c84-907b-4bce-8bf8-2c10dd4c6b06",
+      "source_date": "2026-02-25",
+      "source_title": "Wild & BUCK | Attio Walkthrough",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Sunny",
+        "Kevin Hall",
+        "Russell Greene",
+        "Felix H\u00e4usler",
+        "Nicholas Carmen"
+      ],
+      "created_at": "2026-04-21T06:37:27.399866+00:00"
+    },
+    {
+      "id": "7a96de56-f4ca-402e-8d4c-b2759c848689",
+      "entity_id": "3a23cdca-4d86-477e-b728-dd720361bc9f",
+      "atom_id": "715d05e1-5053-42b2-87e7-c63f490ab642",
+      "transcript_id": "be1811f5-436b-46cc-8e4d-3eca640cc0f2",
+      "source_date": "2026-02-27",
+      "source_title": "Darren Gold (Trium) | Ben Langsfeld (Chief Creative Officer @ Residence): Gaining Your Perspective ",
+      "raw_label": "I think of it as scaffolding.",
+      "people": [
+        "Darren Gold"
+      ],
+      "created_at": "2026-04-21T06:38:33.999071+00:00"
+    },
+    {
+      "id": "9eae0c57-d8eb-4a1f-92b8-b9c4a753016d",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "c9453e2b-4d08-4b6a-8cbc-1815b059549d",
+      "transcript_id": "bf30c9ac-853c-4342-80d8-3a8d66d1dc3f",
+      "source_date": "2026-03-02",
+      "source_title": "Creative Review Annual Awards Judging - DESIGN",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [
+        "Chris Chapman",
+        "Lyndsey Urquhart"
+      ],
+      "created_at": "2026-04-21T06:40:00.22805+00:00"
+    },
+    {
+      "id": "b5c2c82d-7251-4741-bd09-cf3a739835d9",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "663328bb-2a1d-438d-ae40-b88c7390ea86",
+      "transcript_id": "bf30c9ac-853c-4342-80d8-3a8d66d1dc3f",
+      "source_date": "2026-03-02",
+      "source_title": "Creative Review Annual Awards Judging - DESIGN",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Chris Chapman",
+        "Lyndsey Urquhart"
+      ],
+      "created_at": "2026-04-21T06:40:00.704373+00:00"
+    },
+    {
+      "id": "fec035f6-09c7-46ba-a158-1429404cca90",
+      "entity_id": "3a23cdca-4d86-477e-b728-dd720361bc9f",
+      "atom_id": "08b04bff-2ba6-4881-8c48-b20747109562",
+      "transcript_id": "bf30c9ac-853c-4342-80d8-3a8d66d1dc3f",
+      "source_date": "2026-03-02",
+      "source_title": "Creative Review Annual Awards Judging - DESIGN",
+      "raw_label": "I think of it as scaffolding.",
+      "people": [
+        "Chris Chapman",
+        "Lyndsey Urquhart"
+      ],
+      "created_at": "2026-04-21T06:40:01.186588+00:00"
+    },
+    {
+      "id": "e83c1f1f-76c2-424c-9a15-abe9e080a983",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "b628e9b9-652d-4cc3-b651-fd8b085fd5af",
+      "transcript_id": "7426e80d-8023-4033-806c-b2f35278bfd9",
+      "source_date": "2026-03-03",
+      "source_title": "(INT) Ben / Daniel / Ryan Residence weekly working session",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:40:45.954452+00:00"
+    },
+    {
+      "id": "717355d0-902a-47b2-bef6-0e27a89321f9",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "67527ced-af0e-4494-979e-1e0ef28f50a7",
+      "transcript_id": "8b887789-2bd7-43fb-a205-23eef6f2fb4b",
+      "source_date": "2026-03-25",
+      "source_title": "Ben x Will",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:49:23.95699+00:00"
+    },
+    {
+      "id": "05470c74-dc49-45a0-beab-e09f626ca594",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "be07a782-d1be-47b1-94eb-dfaa51ba3221",
+      "transcript_id": "06bb0519-7b9f-4e21-815a-3da8d74bca29",
+      "source_date": "2026-03-05",
+      "source_title": "(INT) Ben / Daniel / Ryan Residence weekly working session",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:42:14.285698+00:00"
+    },
+    {
+      "id": "50a6c9ef-dafa-4990-987e-906fe91a82b2",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "7af13adc-6480-4ee4-96d9-1c805d347ad9",
+      "transcript_id": "f2b45ce1-6e59-4459-9dbc-05f3e3659873",
+      "source_date": "2026-03-06",
+      "source_title": "Jay / Ben",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:42:41.919276+00:00"
+    },
+    {
+      "id": "cf57191c-bfcc-43ec-ac21-b269aa397c9d",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "a915430f-ada9-4b96-8876-76048973938d",
+      "transcript_id": "1fb9b769-c6e5-43b1-bd84-815b417c9c82",
+      "source_date": "2026-03-09",
+      "source_title": "(INT) Chase Freedom Pitch Kickoff (ATTEND) GONNA BE A GOOD TIME",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:43:09.389822+00:00"
+    },
+    {
+      "id": "85e3bfdb-e4f0-44f5-9d13-aee23006056b",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "1eacba5a-77a6-47a4-a680-1201bc9c2958",
+      "transcript_id": "252dbcff-8f64-4b97-bb3b-ee204781d2c0",
+      "source_date": "2026-03-09",
+      "source_title": "[INT] Residence Blacksmith Weekly Leads Check In",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Erin Lockard",
+        "Ryan Castaldo",
+        "Max Vogel",
+        "Tarley Jordan",
+        "Daniell Phillips",
+        "Yker Moreno"
+      ],
+      "created_at": "2026-04-21T06:43:48.360516+00:00"
+    },
+    {
+      "id": "db301dd2-325a-4678-bc10-9a30725fc9ad",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "c576a305-c0ad-4164-921e-d024c30405ad",
+      "transcript_id": "4dce4266-dcb0-469c-8302-8cda8c7aff92",
+      "source_date": "2026-03-10",
+      "source_title": "[INT] Residence Blacksmith Cameron KO",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Erin Lockard",
+        "Yker Moreno",
+        "Cameron L Kelly"
+      ],
+      "created_at": "2026-04-21T06:44:09.851292+00:00"
+    },
+    {
+      "id": "191fbb52-c7fd-40db-a258-e35a80cfb868",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "368820e9-ab3a-47cc-ad8c-35bc8127a414",
+      "transcript_id": "6f5c168b-57f7-44e0-8607-589b61896314",
+      "source_date": "2026-03-11",
+      "source_title": "Wild x Oscar Health Website Discovery / Exploration",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [
+        "Michael Sabatino",
+        "Elizabeth Denault",
+        "Pkane",
+        "Kprestano",
+        "Felix H\u00e4usler",
+        "Claire M",
+        "Amiars",
+        "David Linder",
+        "Hsantana",
+        "Lawrowska",
+        "Norhan"
+      ],
+      "created_at": "2026-04-21T06:44:35.002578+00:00"
+    },
+    {
+      "id": "0ad561e7-314b-46de-b624-910215980c8c",
+      "entity_id": "16742cd4-f241-4fcf-b8b1-ffbed8b9067e",
+      "atom_id": "74bc0306-dc27-43d9-8eb4-fcecf5191041",
+      "transcript_id": "745c8a31-e187-406e-acfd-c61b3d4e312a",
+      "source_date": "2026-03-15",
+      "source_title": "Crunchyroll",
+      "raw_label": "Motion is a dialect, not decoration.",
+      "people": [],
+      "created_at": "2026-04-21T06:44:52.197684+00:00"
+    },
+    {
+      "id": "bd7170ab-5f95-43d3-8ffa-b167233dd82d",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "7e9b59f6-668a-41df-b1ac-4c4f66cfdc6c",
+      "transcript_id": "745c8a31-e187-406e-acfd-c61b3d4e312a",
+      "source_date": "2026-03-15",
+      "source_title": "Crunchyroll",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:44:52.6663+00:00"
+    },
+    {
+      "id": "9dcd98d4-389c-4589-8e20-3e55cc63429a",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "eae3c965-ff5e-4979-ba9f-8a7cdfc78e2a",
+      "transcript_id": "2827df16-4f1b-4923-8b8d-4c590710c7a9",
+      "source_date": "2026-03-16",
+      "source_title": "Weekly Ben/Julian Comms Connect",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:46:00.565032+00:00"
+    },
+    {
+      "id": "703d613b-0e0b-442c-bd3e-0fd159ee9fd1",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "3651b036-7aa9-4ecd-b93b-2de1b4d13560",
+      "transcript_id": "8d8189c5-0a84-40d5-a6df-f11a7e0b298d",
+      "source_date": "2026-03-20",
+      "source_title": "(EXT) Karina x Russell x Ryan ",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Ryan Castaldo",
+        "Russell Greene",
+        "Tina Surelia",
+        "Karina Vivas"
+      ],
+      "created_at": "2026-04-21T06:46:45.132809+00:00"
+    },
+    {
+      "id": "860303ab-b0c2-469d-b917-dd3ea87a2bf3",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "6fc29ef2-1425-4015-b331-f43c8b90579d",
+      "transcript_id": "c69c4658-8958-4e75-96bb-7c4c6e467e1c",
+      "source_date": "2026-03-20",
+      "source_title": "CONFIRMED Details below: CHASE MEETING (zoom info below)",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:47:08.795128+00:00"
+    },
+    {
+      "id": "cc95b3ca-7c51-4e15-980f-bab33826dc85",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "d72c0fb4-741d-4034-aa15-5a9f68a12174",
+      "transcript_id": "fe14ee26-df84-4242-9174-5fd9149c01e6",
+      "source_date": "2026-03-23",
+      "source_title": "Ben / Daniell",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:48:05.575419+00:00"
+    },
+    {
+      "id": "71babc3a-4386-41b4-96c1-2407996abf54",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "ff2a43fe-2393-4e4b-918b-fd0bd5dbe51b",
+      "transcript_id": "cabde803-da0f-4288-8f7b-0fd468ea7f98",
+      "source_date": "2026-03-24",
+      "source_title": "Animated movie project ideas",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:48:20.069446+00:00"
+    },
+    {
+      "id": "bce9cfe8-cdfa-49d3-8144-cfeeb50c674e",
+      "entity_id": "0a9cebaf-00cd-45c2-9e55-fb55261e30da",
+      "atom_id": "915206ed-b814-448f-86fd-a5b64a5f46d0",
+      "transcript_id": "bdbbb5f5-7505-406f-949d-f13a27045a6b",
+      "source_date": "2026-03-30",
+      "source_title": "Bard College Visit ",
+      "raw_label": "I like to think of it as scaffolding.",
+      "people": [],
+      "created_at": "2026-04-21T06:50:10.884592+00:00"
+    },
+    {
+      "id": "52d188a8-d94a-43db-92fe-76ed6067c410",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "06383ad0-deb7-4b90-a1eb-340fac764bd5",
+      "transcript_id": "3de5b3ff-15d1-41b3-916e-f71f40131a3a",
+      "source_date": "2026-04-01",
+      "source_title": "UVM Visit",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:50:40.91618+00:00"
+    },
+    {
+      "id": "21e04abd-eaaa-4b93-80cf-ad1c6cb96bba",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "8a2ed462-47fb-46f0-b9a9-920701029e7e",
+      "transcript_id": "598c8f08-d259-4ad8-aa81-b53e2f2c7ce1",
+      "source_date": "2026-04-07",
+      "source_title": "Ben x Daniell x Mon - Nest Sync",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Monica Lynn",
+        "Daniell Phillips"
+      ],
+      "created_at": "2026-04-21T06:52:05.133549+00:00"
+    },
+    {
+      "id": "d1bfb7c9-c292-477c-bb5d-bcde8374f440",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "4c6af0b6-0a2d-4e44-b6d1-ae7e40f876c7",
+      "transcript_id": "88bbf61c-4a5f-444f-b23b-f69f1178e8eb",
+      "source_date": "2026-04-07",
+      "source_title": "Business Plan Review: ACX ",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Ryan Honey",
+        "Madison Wharton",
+        "Jan Jensen",
+        "Wade Milne, CPA",
+        "Vartan"
+      ],
+      "created_at": "2026-04-21T06:52:11.929241+00:00"
+    },
+    {
+      "id": "de7d7826-c568-448f-9dae-f97a3a65a400",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "fb95ae5b-d0aa-424d-a65a-1c0ffa8f23db",
+      "transcript_id": "8e1cebd1-b78f-4320-81fc-0e8904ee15bf",
+      "source_date": "2026-04-08",
+      "source_title": "(INT) Residence Trio Weekly",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:53:20.674064+00:00"
+    },
+    {
+      "id": "04c54033-c55c-4d75-9080-1f22e061cfe1",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "d31d2f50-9656-422a-95e2-0180a9abf44c",
+      "transcript_id": "b7c70d92-e4a9-41bb-81a5-a36b8971934d",
+      "source_date": "2026-04-08",
+      "source_title": "Ben L / Jose Bi-Weekly",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Jose"
+      ],
+      "created_at": "2026-04-21T06:53:25.131037+00:00"
+    },
+    {
+      "id": "64a1b98f-319c-4814-b721-f1be273a0a72",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "ae4805a7-8112-4618-8493-27e15487c544",
+      "transcript_id": "d0ed91af-a0ff-4bdc-bcdf-ccc5c5984eb2",
+      "source_date": "2026-04-13",
+      "source_title": "Markus / Ben",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Markus Gerdemann"
+      ],
+      "created_at": "2026-04-21T06:54:41.663061+00:00"
+    },
+    {
+      "id": "d5657a19-df5c-40f8-a19a-a6803879b616",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "0fe6cc3b-62f5-452e-9ffd-d6447664a959",
+      "transcript_id": "c51c39fe-c6ea-42b8-871e-ec847dd358cc",
+      "source_date": "2026-04-13",
+      "source_title": "Residence Exec Weekly",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Ryan Honey",
+        "Madison Wharton",
+        "Wade Milne, CPA",
+        "Jan Jensen"
+      ],
+      "created_at": "2026-04-21T06:55:13.292868+00:00"
+    },
+    {
+      "id": "eb693038-79d1-47f6-a5e9-9766ba432d48",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "be9c8410-8f11-482c-9a64-83d49ae9610b",
+      "transcript_id": "a2be5b4a-9c08-436d-8fd9-15ea9a02f9f0",
+      "source_date": "2026-04-15",
+      "source_title": "P+S Monthly Business Review",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Julie Babb",
+        "Ryan Honey",
+        "Jim Babb",
+        "Madison Wharton",
+        "Jan Jensen",
+        "Wade Milne, CPA",
+        "Orion Tait",
+        "Jerry Xing",
+        "Vishal Shah"
+      ],
+      "created_at": "2026-04-21T06:55:52.076588+00:00"
+    },
+    {
+      "id": "bdaaae2b-4e89-4c49-98fd-9672a7631cd7",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "f80e11a3-7f95-4b5c-a8f6-b2adc0e336db",
+      "transcript_id": "3328c9de-e092-46f7-8c5b-efc48be2ed78",
+      "source_date": "2026-04-15",
+      "source_title": "[Global INT] Production x ARG Presents | Assets for Digital Products",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Monica Lynn",
+        "Michelle Fox",
+        "Cameron Browning",
+        "Audrey Yeo",
+        "Alex (DeSanto) van Alphen",
+        "Alex dos Santos",
+        "Alex Moulton",
+        "Alex Dingfelder",
+        "Alexi Yeldezian",
+        "Ana Bernaus",
+        "Andre Araujo",
+        "Andrew Chan Gladstone",
+        "Andy Lyon",
+        "Avery Wright",
+        "Barrett Brown",
+        "B\u00e9n\u00e9dicte Gold-Dalg",
+        "Bill Dorais",
+        "Robert Bisi",
+        "Bittar",
+        "Boone Tallan",
+        "Brian Won",
+        "Camille Chu",
+        "Carolina Brand\u00e3o",
+        "Casey McIntyre",
+        "Chance Woodward",
+        "Chelline Nel",
+        "Christine Choi",
+        "Conor Whelan",
+        "David Evans",
+        "Dae-Han Yi",
+        "Dan Gregoras",
+        "Dani Ortega",
+        "Daniel Pernikoff",
+        "Daniel Oeffinger",
+        "Daniel Coutinho",
+        "Daniell Phillips",
+        "David Hobizal",
+        "David Lynch",
+        "Dominic Taylor",
+        "Doug Wilkinson",
+        "Ege Soyuer",
+        "Elizabeth Abrams",
+        "Ellen Turnill Montoya",
+        "Eric Pautz",
+        "Erica Ford",
+        "Ericka Te Slaa",
+        "Erin Borain Lockard",
+        "Evan Boehm",
+        "Fernanda Garcia Lopez",
+        "Flo Fusco",
+        "Florence Dagostini",
+        "Frida Ek",
+        "Gareth O'Brien",
+        "Gosha Kuznetsov",
+        "Guti Rosado",
+        "Haley Arenson",
+        "Hannah Strong",
+        "HJ Kim",
+        "Jacklyn Reid",
+        "Jacob Wolfman",
+        "Jamey Kitchens",
+        "Jay Grandin",
+        "Jeff Boddy",
+        "Jennifer Blackwell",
+        "Jennifer Whitney",
+        "Jenny Ko",
+        "Jess Pierik",
+        "Joe Mullen",
+        "Jon Gorman",
+        "Jonah Higaonna",
+        "Jose Fuentes",
+        "Joshua Harvey",
+        "Joyce Ho",
+        "Julian Bevan",
+        "Justin Harris",
+        "Katie Liston",
+        "Kendra Ryan",
+        "Kenesha Sneed",
+        "Kevin Walker",
+        "Kevin Hall",
+        "Khadim Dieng",
+        "Kim Stephens",
+        "Kirsten Collabolletta",
+        "Kitty Dillard",
+        "Kyle Strope",
+        "Luisa Murray",
+        "Laura Garcia Lopez",
+        "Laura Goehrke",
+        "Leeann Sands",
+        "Lenny Mayzel",
+        "Lucas Brooking",
+        "Luke Proctor",
+        "Luke Saunders",
+        "Mackenzie Kuzman",
+        "Mandy Smith",
+        "Marc Bouyer",
+        "Marla Anyomi",
+        "Marla Moore",
+        "Matt Kenefick",
+        "Matthew James",
+        "Matthew Padua",
+        "Max Vogel",
+        "Mayele Yebo",
+        "Melissa Buis\u00e1n",
+        "Mercy Lomelin",
+        "Mike Payne",
+        "Mollie Ableman",
+        "Nicholas Carmen",
+        "Nathan Shipley",
+        "Niels Scheide",
+        "Phil Sierzega",
+        "Pablo Martinez",
+        "Pete Kallstrom",
+        "Rafael Mayani",
+        "Rebecca Dell",
+        "Remi Abayomi",
+        "Richard Gray",
+        "Russell Greene",
+        "Stevie Watkins",
+        "Sam Scopelliti",
+        "Simon Buijs",
+        "Simon Chong",
+        "Sophie Knott",
+        "Steve Day",
+        "Sun Lee",
+        "Sunny",
+        "Sylvia Witter",
+        "Talia Lamdan",
+        "Teresa Toews",
+        "Thomas Schmid",
+        "Tony Legato",
+        "Tracy Bunting",
+        "Tucker Klein",
+        "Vina Kong",
+        "Vincent Lammers",
+        "Ward Graumans",
+        "Wolfgang Schiavo",
+        "Yker Moreno",
+        "Liron Ashkenazi",
+        "Leah Grier",
+        "B Rohel",
+        "Georgia Tribuiani",
+        "Louis Tagliaferro",
+        "Nicole Rudden"
+      ],
+      "created_at": "2026-04-21T06:56:11.200914+00:00"
+    },
+    {
+      "id": "feb65894-01ce-43a3-b4d2-38aa274d2d1e",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "29043124-7f7c-4d00-aa3a-5f4e835a36af",
+      "transcript_id": "3b1eb6c7-94ea-471b-846c-3b9286cc6832",
+      "source_date": "2026-04-17",
+      "source_title": "Ryan x Ben x Kevin",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Ryan Honey",
+        "Kevin Walker"
+      ],
+      "created_at": "2026-04-21T06:57:09.245632+00:00"
+    },
+    {
+      "id": "ea223855-d01b-41d5-9311-684123afc86a",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "6134a3d2-a813-48c7-a152-68c1d184b5ae",
+      "transcript_id": "8ccbfe3f-59af-4b68-889b-094ba1671c39",
+      "source_date": "2026-04-10",
+      "source_title": "Wild AI Positioning",
+      "raw_label": "You designed a starting point. They built everything after it.",
+      "people": [
+        "Jay Grandin",
+        "Thomas Ragger",
+        "Michelle Fox",
+        "Jim Babb",
+        "Madison Wharton",
+        "Kevin Walker",
+        "Felix H\u00e4usler",
+        "Daniell Phillips",
+        "Ryan Honey",
+        "Matthias Mentasti",
+        "Thomas Lichtblau"
+      ],
+      "created_at": "2026-04-21T06:53:59.380198+00:00"
+    },
+    {
+      "id": "e8266e80-6896-4491-9c42-945c327085d0",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "544855bd-82fb-4ada-a1b3-1373dd6f5d4f",
+      "transcript_id": "db31686f-a7f5-4cbf-a364-bce6e120af86",
+      "source_date": "2026-04-15",
+      "source_title": "Berkeley Carroll night",
+      "raw_label": "You designed a starting point. They built everything after it.",
+      "people": [],
+      "created_at": "2026-04-21T06:55:57.135783+00:00"
+    },
+    {
+      "id": "9874d623-9a09-42a1-9edc-1b289ee0cc71",
+      "entity_id": "770bfdbd-38bb-4c7d-abe0-842018a10680",
+      "atom_id": "0965f81d-7e0f-4e1f-8b49-09fdd0ca6116",
+      "transcript_id": "0580d98e-e412-441d-941e-1c40bcc8ca85",
+      "source_date": "2026-04-20",
+      "source_title": "(INT) Bi-Weekly Integrated Leads JPM/C/Chase work streams (Residence Companies)",
+      "raw_label": "We designed a starting point. They built everything after it.",
+      "people": [
+        "Ryan Castaldo",
+        "Avery",
+        "Laura Goehrke",
+        "Cole Hammack",
+        "Charlie Short",
+        "Diego Morales",
+        "Dani",
+        "Asia Hunt",
+        "Marykate Henry",
+        "Camille Chu",
+        "HJ Kim",
+        "Dan Gregoras",
+        "Tina Surelia",
+        "Simon Chong",
+        "Khadim",
+        "Alex Moulton",
+        "Ben Russell",
+        "Russell Greene",
+        "Timothy Ryan",
+        "D Evans",
+        "Marla Moore",
+        "Yker Moreno",
+        "Claire M",
+        "Felix H\u00e4usler",
+        "Joselyn Bickford",
+        "Josh Zinger",
+        "Katie Walker",
+        "Kristen",
+        "Leila Wu",
+        "Thomas Ragger",
+        "Victoriawells",
+        "Lindikoprivnikar",
+        "Rob Hirsthermans",
+        "Pablo",
+        "Vicky Chong"
+      ],
+      "created_at": "2026-04-21T12:10:35.135238+00:00"
+    }
+  ]
+}
