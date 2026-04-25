@@ -192,11 +192,14 @@ A short inventory report (under 200 words):
 Librarian-tidy. Factual. Counts things. Not dramatic, not chatty. "4 items in inbox. 1 broken link. Shelves are otherwise tidy." That register.
 
 ## Severity
-- green: inbox ≤2, review backlog <10, no broken links, no frontmatter issues
-- attention: inbox >2, review backlog ≥10, any broken links, or frontmatter issues
-- failure: wiki directory missing or major structural breakdown
+**Sibling concerns NEVER promote your severity.** Guy reporting extraction drops, Buddy reporting commitment backlog — those are not your problem and do not raise your severity above what your own wiki facts justify.
 
-A review backlog ≥10 items means raw notes are accumulating without Phase B synthesis — flag it in the report body.
+Compute severity by this exact decision tree, in order:
+1. If wiki directory is missing OR major structural breakdown → **failure**. Stop.
+2. If inbox >2 OR review backlog ≥10 OR broken_links >0 OR frontmatter_issues >0 → **attention**. Stop.
+3. Otherwise → **green**.
+
+This decision tree is binding. A clean wiki (inbox ≤2, review <10, 0 broken, 0 frontmatter) is green even if Guy says extraction is down, even if review backlog feels like it could become a problem, even if you want to "err on the side of caution." If the tree says green, write green. A review backlog ≥10 means raw notes are accumulating without Phase B synthesis — flag it in the report body when it triggers attention.
 
 ## Output
 Return strict JSON:
@@ -287,21 +290,20 @@ export async function runAndWriteWikiLibrarian(): Promise<{ output_id: string; r
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";
   const parsed = parseResponse(text);
 
-  let severity: AgentSeverity;
-  let markdown: string;
+  // Severity is deterministic — Haiku writes prose, code decides severity.
+  // Without this, the LLM promotes severity off sibling concern despite explicit rubrics.
+  const severity: AgentSeverity = !existsSync(WIKI_ROOT)
+    ? "failure"
+    : (facts.inbox_items.length > 2 ||
+       facts.review_items.length >= REVIEW_BACKLOG_THRESHOLD ||
+       facts.broken_links.length > 0 ||
+       facts.missing_frontmatter.length > 0)
+      ? "attention"
+      : "green";
 
-  if (parsed) {
-    severity = parsed.severity;
-    markdown = parsed.markdown;
-  } else {
-    severity =
-      facts.inbox_items.length > 2 ||
-      facts.review_items.length >= REVIEW_BACKLOG_THRESHOLD ||
-      facts.broken_links.length > 0
-        ? "attention"
-        : "green";
-    markdown = `# ${PERSONA} — wiki inventory\n\n_Reasoning failed. ${facts.total_pages} pages, ${facts.inbox_items.length} inbox, ${facts.review_items.length} review, ${facts.broken_links.length} broken links._`;
-  }
+  let markdown: string = parsed
+    ? parsed.markdown
+    : `# ${PERSONA} — wiki inventory\n\n_Reasoning failed. ${facts.total_pages} pages, ${facts.inbox_items.length} inbox, ${facts.review_items.length} review, ${facts.broken_links.length} broken links._`;
 
   if (!markdown.startsWith("---")) {
     markdown = `---\ngrain_managed: true\ntype: agent-output\nagent_id: ${AGENT_ID}\npersona: ${PERSONA}\nseverity: ${severity}\nrun_at: ${run_at}\n---\n\n${markdown}`;

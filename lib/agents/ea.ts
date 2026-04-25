@@ -140,11 +140,13 @@ You receive a compact numerical snapshot of your previous triage (totals: open, 
 Sibling reports from Guy and Dood are inputs, not conclusions. Do not frame your triage around "the pipeline is broken" unless Guy's facts show it is — a Dood RLS finding is a security hygiene issue, not an outage (service-role writes bypass RLS). The closure loop (Notion Status → dx_commitments.status) mirrors completions back hourly, so a commitment sitting at status=open genuinely hasn't been closed; do not explain it away as "probably done and unlogged" unless the age and context actually support that. If a large backlog is open because 44 items were just seeded from the heard list, say that — do not call it "stale."
 
 ## Severity
-- green: nothing needs attention today
-- attention: something is overdue or approaching a deadline
-- failure: a high-weight commitment is significantly overdue and unaddressed
+Severity is event-driven, not volume-driven. A large standing backlog with no new movement is known state — not new signal.
 
-Severity comes from your commitment facts, not sibling tone. If no high-weight item is significantly overdue, the ceiling is "attention" even if Guy or Dood reported "failure". Do not promote severity to match siblings.
+- green: counts unchanged from prior snapshot AND no item newly crossed a deadline AND no new high-weight item appeared
+- attention: a previously-fresh item became overdue, a new high-weight item appeared, or a deadline is approaching within 3 days
+- failure: a high-weight commitment is significantly overdue (>7 days) AND unaddressed
+
+"656 items on others' plates, ↑31 from stale aging" is green — aging in place is not a new event. Do not pick attention because the absolute count feels high. Severity comes from your commitment facts, not sibling tone.
 
 ## Output
 Return strict JSON:
@@ -255,16 +257,28 @@ export async function runAndWriteEa(): Promise<{ output_id: string; report: Budd
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";
   const parsed = parseResponse(text);
 
-  let severity: AgentSeverity = "green";
-  let markdown: string;
+  // Severity is deterministic — Haiku writes prose, code decides severity.
+  // Event-driven: a standing backlog with no new movement is known state, not new signal.
+  const highWeightOverdue = facts.ben_items.filter(
+    (x) => x.classification.weight === "high" && (x.overdue_days ?? 0) > 7,
+  );
+  const newHighWeight = facts.ben_items.filter(
+    (x) => x.classification.weight === "high" && x.age_days <= 1,
+  );
+  const approachingDeadline = facts.ben_items.filter(
+    (x) => x.overdue_days !== null && x.overdue_days >= -3 && x.overdue_days <= 0,
+  );
+  const priorBenCount = (prior?.findings as { ben_count?: number } | undefined)?.ben_count;
+  const benCountChanged = priorBenCount !== undefined && priorBenCount !== facts.ben_items.length;
 
-  if (parsed) {
-    severity = parsed.severity;
-    markdown = parsed.markdown;
-  } else {
-    severity = "attention";
-    markdown = `# ${PERSONA} — triage\n\n_Reasoning step failed. ${facts.ben_items.length} items on your plate, ${facts.others_items.length} on others'._`;
-  }
+  const severity: AgentSeverity =
+    highWeightOverdue.length > 0 ? "failure"
+    : (newHighWeight.length > 0 || approachingDeadline.length > 0 || benCountChanged) ? "attention"
+    : "green";
+
+  let markdown: string = parsed
+    ? parsed.markdown
+    : `# ${PERSONA} — triage\n\n_Reasoning step failed. ${facts.ben_items.length} items on your plate, ${facts.others_items.length} on others'._`;
 
   if (!markdown.startsWith("---")) {
     markdown = `---\ngrain_managed: true\ntype: agent-output\nagent_id: ${AGENT_ID}\npersona: ${PERSONA}\nseverity: ${severity}\nrun_at: ${run_at}\n---\n\n${markdown}`;

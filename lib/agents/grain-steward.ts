@@ -47,7 +47,10 @@ async function gatherFacts(): Promise<PipelineFacts> {
   const week = new Date(Date.now() - 7 * 24 * 3_600_000).toISOString();
   const staleDate = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10);
 
-  const EXPECTED_TYPES = ["belief", "tension", "quote", "voice", "commitment", "read"];
+  // Tension and commitment are sparse by design — the tension prompt itself
+  // says most meetings have zero, and not every meeting produces a commitment.
+  // Treating their absence as a "gap" manufactures false positives.
+  const EXPECTED_TYPES = ["belief", "quote", "voice", "read"];
 
   const [
     briefingLatest,
@@ -319,26 +322,29 @@ export async function runGrainSteward(): Promise<GuyReport> {
   const text = content.type === "text" ? content.text : "";
   const parsed = parseAgentResponse(text);
 
-  if (!parsed) {
-    // Fallback: if Claude fails to parse, produce a minimal report
-    return {
-      run_at,
-      overall: "attention",
-      markdown: `---\ngrain_managed: true\ntype: agent-output\nagent_id: ${AGENT_ID}\npersona: ${PERSONA}\nseverity: attention\nrun_at: ${run_at}\n---\n\n# ${PERSONA} — Grain Guardian\n\n_Reasoning step failed. Raw facts: briefing ${facts.briefing.hours_ago ?? "?"}h ago, ${facts.commitments.open} open commitments (${facts.commitments.stale_14d} stale), ${facts.extraction.transcripts_24h} transcripts today, ${facts.volume.atoms_24h} atoms._`,
-      facts,
-      had_siblings: { buddy: !!siblings.buddy, dood: !!siblings.dood },
-    };
-  }
+  // Severity is deterministic — Haiku writes prose, code decides severity.
+  // A break = zero transcripts ingested AND extraction silent, OR briefing way overdue.
+  const briefingHoursAgo = facts.briefing.hours_ago;
+  const extractionBroken = facts.extraction.transcripts_24h > 0 && facts.extraction.atoms_24h === 0;
+  const briefingFailed = briefingHoursAgo !== null && briefingHoursAgo > 48;
+  const incompletePassesStacking = facts.extraction.transcripts_with_gaps.length >= 3;
 
-  // Ensure frontmatter is present
-  let markdown = parsed.markdown;
+  const overall: AgentSeverity =
+    (extractionBroken || briefingFailed) ? "failure"
+    : incompletePassesStacking ? "attention"
+    : "green";
+
+  let markdown: string = parsed
+    ? parsed.markdown
+    : `# ${PERSONA} — Grain Guardian\n\n_Reasoning step failed. Raw facts: briefing ${briefingHoursAgo ?? "?"}h ago, ${facts.commitments.open} open commitments (${facts.commitments.stale_14d} stale), ${facts.extraction.transcripts_24h} transcripts today, ${facts.volume.atoms_24h} atoms._`;
+
   if (!markdown.startsWith("---")) {
-    markdown = `---\ngrain_managed: true\ntype: agent-output\nagent_id: ${AGENT_ID}\npersona: ${PERSONA}\nseverity: ${parsed.severity}\nrun_at: ${run_at}\n---\n\n${markdown}`;
+    markdown = `---\ngrain_managed: true\ntype: agent-output\nagent_id: ${AGENT_ID}\npersona: ${PERSONA}\nseverity: ${overall}\nrun_at: ${run_at}\n---\n\n${markdown}`;
   }
 
   return {
     run_at,
-    overall: parsed.severity,
+    overall,
     markdown,
     facts,
     had_siblings: { buddy: !!siblings.buddy, dood: !!siblings.dood },

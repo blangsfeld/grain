@@ -158,11 +158,15 @@ You receive a compact numerical snapshot of your previous sweep (totals + per-pr
 - Do not inherit the prior run's severity. Compute severity from today's totals.
 
 ## Severity
-- green: no WARN or ERROR findings
-- attention: WARN findings exist
-- failure: ERROR findings or fetch failures
+Severity is delta-driven, not count-driven. A WARN backlog that has sat unchanged for days is known state — not new signal. **Sibling concerns NEVER promote your severity.** Guy reporting pipeline issues, Buddy reporting commitment backlog — these are not your problem and do not raise your severity above what your own facts justify.
 
-Severity is computed from your totals against this rubric. A sibling reporting "failure" does not promote your severity. If your totals are 0 ERROR and 0 fetch failures, the ceiling is "attention" no matter how alarming Guy or Buddy sounded.
+Compute severity by this exact decision tree, in order:
+1. If total_errors > 0 OR any project failed to fetch → **failure**. Stop.
+2. If a prior snapshot exists AND every project's WARN count equals the prior count AND no new rule pattern appeared → **green**. Stop.
+3. If WARN counts moved up OR a new pattern appeared OR a previously-fixed pattern reappeared → **attention**. Stop.
+4. Otherwise (no prior snapshot AND no errors AND no fetch failures) → **green**.
+
+This decision tree is binding. Do not override it because Guy or Buddy sounded concerned, because the absolute WARN count feels high, or because you want to "err on the side of caution." If the tree says green, write green.
 
 ## Cross-signal discipline
 When you reference a sibling, quote or summarize only what they actually said. Do not invent causal claims to bridge findings — if Buddy did not say "RLS is blocking service-role writes," do not attribute that to them. Service-role writes bypass RLS; do not claim RLS warnings are blocking extraction or sync unless a sibling's facts (not framing) support it.
@@ -304,17 +308,25 @@ export async function runAndWriteSecuritySteward(): Promise<{ output_id: string;
   const text = response.content[0]?.type === "text" ? response.content[0].text : "";
   const parsed = parseResponse(text);
 
-  let severity: AgentSeverity;
-  let markdown: string;
+  // Severity is deterministic — Haiku writes prose, code decides severity.
+  // Delta-driven: a standing WARN backlog with no movement is known state, not new signal.
+  const priorProjects = (prior?.findings as { projects?: Array<{ name: string; warnings: number }> } | undefined)?.projects;
+  const warnsMoved = priorProjects
+    ? facts.projects.some((p) => {
+        const before = priorProjects.find((pp) => pp.name === p.name)?.warnings ?? 0;
+        return p.warnings.length > before;
+      })
+    : false;
 
-  if (parsed) {
-    severity = parsed.severity;
-    markdown = parsed.markdown;
-  } else {
-    severity = facts.total_errors > 0 || facts.projects.some((p) => !p.ok) ? "failure"
-      : facts.total_warnings > 0 ? "attention" : "green";
-    markdown = `# ${PERSONA} — security sweep\n\n_Reasoning failed. Totals: ${facts.total_errors} errors, ${facts.total_warnings} warnings across ${facts.projects.length} projects._`;
-  }
+  const severity: AgentSeverity =
+    facts.total_errors > 0 || facts.projects.some((p) => !p.ok) ? "failure"
+    : warnsMoved ? "attention"
+    : !priorProjects && facts.total_warnings > 0 ? "attention"
+    : "green";
+
+  let markdown: string = parsed
+    ? parsed.markdown
+    : `# ${PERSONA} — security sweep\n\n_Reasoning failed. Totals: ${facts.total_errors} errors, ${facts.total_warnings} warnings across ${facts.projects.length} projects._`;
 
   if (!markdown.startsWith("---")) {
     markdown = `---\ngrain_managed: true\ntype: agent-output\nagent_id: ${AGENT_ID}\npersona: ${PERSONA}\nseverity: ${severity}\nrun_at: ${run_at}\n---\n\n${markdown}`;
