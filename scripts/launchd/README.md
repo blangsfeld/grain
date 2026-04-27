@@ -128,7 +128,6 @@ Both are pure API-to-API, no vault dependency, no heavy LLM. They're the "safe" 
 | `grain-cron-what-if` | `/api/cron/what-if` (Bruh) | Mon 10:37 |
 | `grain-cron-columnist` | `/api/cron/columnist` (Clark) | Wed 10:47 |
 | `grain-cron-notion-steward` | `/api/cron/notion-steward` (Timi) | Mon 10:27 |
-| `grain-cron-buddy-surface` | `/api/cron/buddy-surface` | Mon 09:15 |
 | `grain-cron-pulse` | `/api/cron/pulse` | Tue/Fri 12:00 |
 
 ## How they work

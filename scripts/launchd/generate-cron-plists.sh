@@ -35,7 +35,6 @@ CRONS=(
   "what-if|/api/cron/what-if|wd1:10:37"
   "columnist|/api/cron/columnist|wd3:10:47"
   "notion-steward|/api/cron/notion-steward|wd1:10:27"
-  "buddy-surface|/api/cron/buddy-surface|wd1:09:15"
   "pulse|/api/cron/pulse|wd2:12:00;wd5:12:00"
 )
 

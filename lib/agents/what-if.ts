@@ -173,7 +173,6 @@ const EXISTING_RESOURCES = {
     "Dood (security-steward) — daily cross-project Supabase advisor sweep",
     "Bruh (what-if) — weekly pitch generation from corpus (this is you)",
     "Milli (wiki-librarian) — local vault lint, wiki inventory",
-    "Keys (telegram-desk) — Telegram front door, capture + classify + query-answer",
     "shared state via agent_outputs table, /boot materializes to vault",
   ],
   network: [

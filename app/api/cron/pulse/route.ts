@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { runPulse } from "@/lib/pulse";
-import { sendTelegramReply } from "@/lib/agents/telegram-desk";
+import { sendTelegramReply } from "@/lib/telegram-send";
 import { beat } from "@/lib/heartbeat";
 
 export const maxDuration = 60;

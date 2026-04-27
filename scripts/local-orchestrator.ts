@@ -30,7 +30,7 @@ import { refreshCompanyPages } from "@/lib/company-pages";
 import { runAndWriteWikiLibrarian } from "@/lib/agents/wiki-librarian";
 import { processInbox } from "@/lib/agents/wiki-triage";
 import { runBuddySurface } from "@/lib/agents/buddy-synthesize";
-import { sendTelegramReply } from "@/lib/agents/telegram-desk";
+import { sendTelegramReply } from "@/lib/telegram-send";
 import { beat } from "@/lib/heartbeat";
 import { materializeHeartbeat } from "@/lib/heartbeat-render";
 import { runNightlyTier1 } from "@/lib/signal-engine/nightly";
