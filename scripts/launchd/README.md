@@ -133,12 +133,37 @@ Both are pure API-to-API, no vault dependency, no heavy LLM. They're the "safe" 
 
 ## How they work
 
-Each plist runs `scripts/cron-curl.sh /api/cron/<name>`. The helper:
-1. Sources `~/Documents/Apps/grain/.env.local` to load `CRON_SECRET`.
+Each plist runs `~/.local/bin/grain-cron-curl /api/cron/<name>`. The helper:
+1. Sources `~/.config/grain/cron.env` to load `CRON_SECRET`.
 2. Curls the Vercel route with `Authorization: Bearer $CRON_SECRET`.
 3. Retries twice on connection refused, 290s max-time (Vercel functions cap at 300s).
 
+### Why the helper isn't run from the repo path
+
+macOS TCC blocks launchd-spawned processes from reading files under `~/Documents` without explicit Full Disk Access grant. Both the helper script AND the env file have to live outside `~/Documents`, hence:
+
+- **Helper:** `~/.local/bin/grain-cron-curl` (installed copy of `scripts/cron-curl.sh`)
+- **Credentials:** `~/.config/grain/cron.env` (single line: `CRON_SECRET=...`)
+
+The repo holds the source-of-truth; install copies them to TCC-safe locations.
+
 ## Install all 11
+
+One-time setup — copy helper + credential to TCC-safe paths:
+
+```bash
+# Helper to ~/.local/bin
+mkdir -p ~/.local/bin
+cp ~/Documents/Apps/grain/scripts/cron-curl.sh ~/.local/bin/grain-cron-curl
+chmod +x ~/.local/bin/grain-cron-curl
+
+# CRON_SECRET to ~/.config/grain (extract from .env.local)
+mkdir -p ~/.config/grain
+grep "^CRON_SECRET=" ~/Documents/Apps/grain/.env.local > ~/.config/grain/cron.env
+chmod 600 ~/.config/grain/cron.env
+```
+
+Then install the plists:
 
 ```bash
 # Copy plists into LaunchAgents
@@ -146,6 +171,7 @@ cp ~/Documents/Apps/grain/scripts/launchd/com.benlangsfeld.grain-cron-*.plist ~/
 
 # Bootstrap each into the user's launchd domain
 for plist in ~/Library/LaunchAgents/com.benlangsfeld.grain-cron-*.plist; do
+  launchctl bootout gui/$(id -u) "$plist" 2>/dev/null
   launchctl bootstrap gui/$(id -u) "$plist"
 done
 
@@ -157,10 +183,12 @@ launchctl list | grep grain-cron
 
 ```bash
 # Direct invocation — fastest way to verify CRON_SECRET works
-~/Documents/Apps/grain/scripts/cron-curl.sh /api/cron/grain-steward
+~/.local/bin/grain-cron-curl /api/cron/grain-steward
 
-# Via launchd kickstart
+# Via launchd kickstart (real test — runs in launchd's TCC context)
 launchctl kickstart -k gui/$(id -u)/com.benlangsfeld.grain-cron-grain-steward
+sleep 30
+cat ~/Library/Logs/grain-cron-grain-steward.log
 ```
 
 ## Logs
@@ -188,6 +216,17 @@ done
 
 ## Prerequisites on Mac Studio
 
-- `~/Documents/Apps/grain/.env.local` must contain `CRON_SECRET` (pulled via `vercel env pull --environment=production`)
-- `vercel` CLI installed (`bun add -g vercel`) and project linked (`vercel link --project grain`)
+- `~/.config/grain/cron.env` exists with `CRON_SECRET` (extracted from `.env.local` — see install above)
+- `~/.local/bin/grain-cron-curl` exists and is executable
+- `vercel` CLI installed (`bun add -g vercel`) and project linked (`vercel link --project grain`) — only needed to refresh `CRON_SECRET` from prod env
 - Mac Studio always-on (Energy Saver: prevent automatic sleeping)
+
+## When Vercel rotates CRON_SECRET
+
+```bash
+cd ~/Documents/Apps/grain
+vercel env pull .env.local.tmp --environment=production --yes
+grep "^CRON_SECRET=" .env.local.tmp > ~/.config/grain/cron.env
+rm .env.local.tmp
+# No need to re-bootstrap plists — they read the env file at every fire.
+```

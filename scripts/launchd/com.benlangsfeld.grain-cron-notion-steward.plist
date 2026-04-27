@@ -7,7 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/ben/Documents/Apps/grain/scripts/cron-curl.sh</string>
+        <string>/Users/ben/.local/bin/grain-cron-curl</string>
         <string>/api/cron/notion-steward</string>
     </array>
 

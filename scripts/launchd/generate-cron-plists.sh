@@ -12,7 +12,12 @@
 set -euo pipefail
 
 OUT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HELPER="/Users/ben/Documents/Apps/grain/scripts/cron-curl.sh"
+# Helper lives in ~/.local/bin (outside ~/Documents) because macOS TCC blocks
+# launchd-spawned processes from executing scripts in ~/Documents without
+# Full Disk Access. The repo's scripts/cron-curl.sh is the canonical source;
+# `bash scripts/launchd/install.sh` (or the README's install block) copies it
+# to ~/.local/bin/grain-cron-curl.
+HELPER="$HOME/.local/bin/grain-cron-curl"
 
 # Format: name|route_path|schedule_spec
 # schedule_spec is one or more semicolon-separated entries of the form:
