@@ -2,7 +2,9 @@
 
 `com.residence.grain-local.plist` is the launchd job that runs `scripts/local-orchestrator.ts` twice a day (06:45 and 19:45 local) to sync Supabase ↔ Obsidian vault.
 
-Vercel handles ingest, extraction, briefings, and agent runs. Everything lands in Supabase. The orchestrator does the last mile Vercel can't: write to the local vault, push vault snapshots back to Supabase for Keys, run Milli's wiki reflection.
+The orchestrator does the last mile Vercel can't: write to the local vault, push vault snapshots back to Supabase for Keys, run Milli's wiki reflection.
+
+> **Note (2026-04-27):** Vercel Hobby tier allows only 2 cron jobs at daily-or-less frequency. Of grain's 13 declared crons, 11 were silently never firing. They've been migrated to Mac Studio launchd (see "Migrated cron jobs" below). Vercel still hosts the route handlers; only the *trigger* moved local.
 
 ## Install
 
@@ -96,3 +98,96 @@ launchctl kickstart -k gui/$(id -u)/com.benlangsfeld.network-pulse
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.benlangsfeld.network-pulse.plist
 rm ~/Library/LaunchAgents/com.benlangsfeld.network-pulse.plist
 ```
+
+---
+
+# Migrated cron jobs (Vercel Hobby workaround)
+
+`com.benlangsfeld.grain-cron-*.plist` are 11 launchd jobs that fire on schedule and `curl` the corresponding Vercel route. They replace the Vercel-side cron scheduling for routes that exceeded the Hobby 2-cron limit.
+
+The route handlers themselves remain on Vercel — only the trigger is local. Mac Studio is always-on, has no cron count limit, no frequency limit, and no DST hassle worth caring about (±1 hour drift on UTC is fine for these jobs).
+
+## What stays on Vercel
+
+`vercel.json` declares only 2 crons (the Hobby-allowed maximum):
+- `/api/ingest/granola` — daily 11:30 UTC
+- `/api/cron/closure-sync` — daily 12:45 UTC
+
+Both are pure API-to-API, no vault dependency, no heavy LLM. They're the "safe" two.
+
+## What moved local (11 plists)
+
+| Plist | Route | Local schedule |
+|---|---|---|
+| `grain-cron-daily` | `/api/cron/daily` | M-F 08:03 |
+| `grain-cron-weekly` | `/api/cron/weekly` | Sat 22:17 |
+| `grain-cron-weekly-lint` | `/api/cron/weekly-lint` | Mon 10:00 |
+| `grain-cron-grain-steward` | `/api/cron/grain-steward` (Guy) | daily 08:53 |
+| `grain-cron-ea` | `/api/cron/ea` (Buddy) | daily 09:07 |
+| `grain-cron-security-steward` | `/api/cron/security-steward` (Dood) | daily 09:23 |
+| `grain-cron-what-if` | `/api/cron/what-if` (Bruh) | Mon 10:37 |
+| `grain-cron-columnist` | `/api/cron/columnist` (Clark) | Wed 10:47 |
+| `grain-cron-notion-steward` | `/api/cron/notion-steward` (Timi) | Mon 10:27 |
+| `grain-cron-buddy-surface` | `/api/cron/buddy-surface` | Mon 09:15 |
+| `grain-cron-pulse` | `/api/cron/pulse` | Tue/Fri 12:00 |
+
+## How they work
+
+Each plist runs `scripts/cron-curl.sh /api/cron/<name>`. The helper:
+1. Sources `~/Documents/Apps/grain/.env.local` to load `CRON_SECRET`.
+2. Curls the Vercel route with `Authorization: Bearer $CRON_SECRET`.
+3. Retries twice on connection refused, 290s max-time (Vercel functions cap at 300s).
+
+## Install all 11
+
+```bash
+# Copy plists into LaunchAgents
+cp ~/Documents/Apps/grain/scripts/launchd/com.benlangsfeld.grain-cron-*.plist ~/Library/LaunchAgents/
+
+# Bootstrap each into the user's launchd domain
+for plist in ~/Library/LaunchAgents/com.benlangsfeld.grain-cron-*.plist; do
+  launchctl bootstrap gui/$(id -u) "$plist"
+done
+
+# Verify they registered
+launchctl list | grep grain-cron
+```
+
+## Smoke-test one cron manually
+
+```bash
+# Direct invocation — fastest way to verify CRON_SECRET works
+~/Documents/Apps/grain/scripts/cron-curl.sh /api/cron/grain-steward
+
+# Via launchd kickstart
+launchctl kickstart -k gui/$(id -u)/com.benlangsfeld.grain-cron-grain-steward
+```
+
+## Logs
+
+- `~/Library/Logs/grain-cron-<name>.log` — stdout
+- `~/Library/Logs/grain-cron-<name>.err.log` — stderr
+
+## Regenerate plists after schedule changes
+
+Edit `CRONS=(...)` in `scripts/launchd/generate-cron-plists.sh`, then:
+
+```bash
+bash ~/Documents/Apps/grain/scripts/launchd/generate-cron-plists.sh
+# then re-bootstrap any plists whose schedules changed
+```
+
+## Uninstall all 11
+
+```bash
+for plist in ~/Library/LaunchAgents/com.benlangsfeld.grain-cron-*.plist; do
+  launchctl bootout gui/$(id -u) "$plist" 2>/dev/null || true
+  rm "$plist"
+done
+```
+
+## Prerequisites on Mac Studio
+
+- `~/Documents/Apps/grain/.env.local` must contain `CRON_SECRET` (pulled via `vercel env pull --environment=production`)
+- `vercel` CLI installed (`bun add -g vercel`) and project linked (`vercel link --project grain`)
+- Mac Studio always-on (Energy Saver: prevent automatic sleeping)

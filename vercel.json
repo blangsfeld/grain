@@ -1,56 +1,15 @@
 {
+  "//": "Vercel Hobby tier allows 2 cron jobs at daily-or-less frequency.",
+  "//1": "These two are pure API-to-API (no vault, no heavy LLM) and fit cleanly.",
+  "//2": "All other crons moved to Mac Studio launchd via scripts/cron-curl.sh + scripts/launchd/com.benlangsfeld.grain-cron-*.plist",
   "crons": [
     {
       "path": "/api/ingest/granola",
       "schedule": "30 11 * * *"
     },
     {
-      "path": "/api/cron/daily",
-      "schedule": "3 12 * * 1-5"
-    },
-    {
-      "path": "/api/cron/weekly",
-      "schedule": "17 2 * * 0"
-    },
-    {
-      "path": "/api/cron/weekly-lint",
-      "schedule": "0 14 * * 1"
-    },
-    {
-      "path": "/api/cron/grain-steward",
-      "schedule": "53 12 * * *"
-    },
-    {
-      "path": "/api/cron/ea",
-      "schedule": "7 13 * * *"
-    },
-    {
-      "path": "/api/cron/security-steward",
-      "schedule": "23 13 * * *"
-    },
-    {
-      "path": "/api/cron/what-if",
-      "schedule": "37 14 * * 1"
-    },
-    {
-      "path": "/api/cron/columnist",
-      "schedule": "47 14 * * 3"
-    },
-    {
-      "path": "/api/cron/notion-steward",
-      "schedule": "27 14 * * 1"
-    },
-    {
-      "path": "/api/cron/buddy-surface",
-      "schedule": "15 13 * * 1"
-    },
-    {
       "path": "/api/cron/closure-sync",
       "schedule": "45 12 * * *"
-    },
-    {
-      "path": "/api/cron/pulse",
-      "schedule": "0 16 * * 2,5"
     }
   ]
 }
