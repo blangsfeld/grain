@@ -12,12 +12,14 @@ import { buildVoicePrompt, VOICE_MAX_TOKENS } from "@/lib/prompts/voice";
 import { buildCommitmentsPrompt, COMMITMENTS_MAX_TOKENS } from "@/lib/prompts/commitments";
 import { buildDecisionsPrompt, DECISIONS_MAX_TOKENS } from "@/lib/prompts/decisions";
 import { buildRelationshipsPrompt, RELATIONSHIPS_MAX_TOKENS } from "@/lib/prompts/relationships";
+import { buildSynthesisPrompt, SYNTHESIS_MAX_TOKENS } from "@/lib/prompts/synthesis";
 import type {
   AtomPass,
   AtomType,
   DxAtomInsert,
   RelationshipsPayload,
   ReadContent,
+  SynthesisContent,
 } from "@/types/atoms";
 
 const MODEL = "claude-sonnet-4-20250514";
@@ -80,6 +82,12 @@ const PASS_CONFIG: Record<AtomPass, PassConfig> = {
     atomType: "relationships",
     temperature: 0.2,
   },
+  synthesis: {
+    buildPrompt: buildSynthesisPrompt,
+    maxTokens: SYNTHESIS_MAX_TOKENS,
+    atomType: "synthesis",
+    temperature: 0.3,
+  },
 };
 
 /** Run a single extraction pass. Returns atoms of one type. */
@@ -114,6 +122,11 @@ async function runPass(
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       atoms.push({ type: "read", content: parsed as ReadContent });
     }
+  } else if (config.atomType === "synthesis") {
+    // Synthesis produces a single atom with the trajectory shape
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      atoms.push({ type: "synthesis", content: parsed as SynthesisContent });
+    }
   } else if (config.atomType === "relationships") {
     // Relationships is a meta atom — single object payload, filtered
     // out before insertAtoms and persisted to dx_transcripts.meta_relationships.
@@ -137,7 +150,8 @@ async function runPass(
 
 /** Parse JSON from Claude response. Handles both objects and arrays. */
 function parseJsonResponse(text: string, atomType: AtomType): unknown {
-  const isObjectShape = atomType === "read" || atomType === "relationships";
+  const isObjectShape =
+    atomType === "read" || atomType === "relationships" || atomType === "synthesis";
   try {
     // Try to find JSON in the response
     if (isObjectShape) {

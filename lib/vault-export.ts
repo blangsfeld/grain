@@ -9,7 +9,7 @@ import { writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { getAtomsForDate, getAtomsForRange } from "@/lib/atom-db";
-import type { DxAtom, BeliefContent, TensionContent, QuoteContent, VoiceContent, CommitmentContent, ReadContent } from "@/types/atoms";
+import type { DxAtom, BeliefContent, TensionContent, QuoteContent, VoiceContent, CommitmentContent, ReadContent, SynthesisContent } from "@/types/atoms";
 
 const VAULT_ROOT = join(homedir(), "Documents/Obsidian/Studio");
 const MEETINGS_DIR = join(VAULT_ROOT, "50-meetings");
@@ -73,6 +73,32 @@ export async function exportDailyHighlightsToVault(date: string): Promise<string
       const c = atom.content as ReadContent;
       if (atom.source_title) lines.push(`**${atom.source_title}**`);
       lines.push(c.the_read);
+      lines.push("");
+    }
+  }
+
+  // Synthesis (per-meeting trajectory shape)
+  if (byType.synthesis?.length) {
+    lines.push("## Synthesis");
+    for (const atom of byType.synthesis) {
+      const c = atom.content as SynthesisContent;
+      if (atom.source_title) lines.push(`### ${atom.source_title}`);
+      if (c.arc) {
+        lines.push(`**Arc.** ${c.arc}`);
+        lines.push("");
+      }
+      appendList(lines, "Beliefs formed", c.beliefs_formed);
+      appendList(lines, "Beliefs challenged", c.beliefs_challenged);
+      appendList(lines, "Tensions chronic", c.tensions_chronic);
+      appendList(lines, "Tensions resolved", c.tensions_resolved);
+      appendList(lines, "Commitments kept", c.commitments_kept);
+      appendList(lines, "Commitments made", c.commitments_made);
+      appendList(lines, "Commitments drifting", c.commitments_drifting);
+      appendList(lines, "Open questions", c.open_questions);
+      if (c.density_signal) {
+        appendList(lines, "Thick on", c.density_signal.thick_on);
+        appendList(lines, "Thin on", c.density_signal.thin_on);
+      }
       lines.push("");
     }
   }
@@ -170,4 +196,13 @@ function countTypes(atoms: DxAtom[]): string {
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
+
+function appendList(lines: string[], label: string, items: string[] | undefined): void {
+  if (!items?.length) return;
+  lines.push(`**${label}.**`);
+  for (const item of items) {
+    lines.push(`- ${item}`);
+  }
+  lines.push("");
 }

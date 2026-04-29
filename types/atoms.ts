@@ -15,7 +15,8 @@ export type AtomType =
   | "commitment"
   | "read"
   | "decision"
-  | "relationships";
+  | "relationships"
+  | "synthesis";
 
 // ─── Content shapes per type ─────────────────────
 
@@ -126,6 +127,42 @@ export interface DecisionContent {
   confidence: "confirmed" | "tentative";
 }
 
+/**
+ * SYNTHESIS — per-meeting trajectory diagnosis.
+ *
+ * Mirrors the quarterly trajectory shape (Beliefs Formed/Challenged, Tensions
+ * Chronic/Resolved, Commitment Patterns, Open) at single-meeting granularity.
+ * Single-object payload per transcript (like `read` and `relationships`).
+ *
+ * `open_questions` is the structured field that feeds the `/probe` skill —
+ * gaps the meeting surfaced but didn't close.
+ */
+export interface SynthesisContent {
+  /** 1-2 sentences on what shifted in this meeting. */
+  arc: string;
+  /** Beliefs that emerged or strengthened. */
+  beliefs_formed: string[];
+  /** Beliefs that weakened, were contradicted, or got challenged. */
+  beliefs_challenged: string[];
+  /** Recurring tensions visible again. Same dynamics as prior meetings. */
+  tensions_chronic: string[];
+  /** Stuck things that got unstuck in this meeting. */
+  tensions_resolved: string[];
+  /** Commitments from prior meetings that were honored. */
+  commitments_kept: string[];
+  /** New commitments made in this meeting. */
+  commitments_made: string[];
+  /** Commitments past their date with no closure / quietly slipping. */
+  commitments_drifting: string[];
+  /** Questions raised but not answered. Gaps. The next-meeting agenda. */
+  open_questions: string[];
+  /** What this meeting was thick on (well-developed) vs. thin on (mentioned briefly). */
+  density_signal: {
+    thick_on: string[];
+    thin_on: string[];
+  };
+}
+
 export interface RelationshipsPayload {
   people: Array<{
     name: string;
@@ -152,7 +189,8 @@ export type AtomContent =
   | CommitmentContent
   | ReadContent
   | DecisionContent
-  | RelationshipsPayload;
+  | RelationshipsPayload
+  | SynthesisContent;
 
 // ─── Database row ────────────────────────────────
 
@@ -202,7 +240,8 @@ export type AtomPass =
   | "voice"
   | "commitments"
   | "decisions"
-  | "relationships";
+  | "relationships"
+  | "synthesis";
 
 export interface ExtractionPlan {
   passes: AtomPass[];

@@ -129,6 +129,7 @@ export function getExtractionPlan(c: Classification): ExtractionPlan {
   if (c.source_grade || c.has_commitments) {
     passes.push("read");
     passes.push("quotes");
+    passes.push("synthesis");
   }
 
   // Commitment pass
